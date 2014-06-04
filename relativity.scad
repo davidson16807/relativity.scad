@@ -109,7 +109,7 @@ module hollow(n){
 // useful for interfacing with vitamins
 module wrap(n){
 	difference(){
-		buffer(n) children();
+		hull() buffer(n) children();
 		translate([0,0,infinitesimal])  children();
 		translate([0,0,-infinitesimal]) children();
 	}
