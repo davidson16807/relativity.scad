@@ -186,45 +186,36 @@ module parent(size=undef, anchor=center){
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
-module box(size, anchor=bottom) {
+module box(size, anchor=bottom, visible=true) {
 	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
 	translate(-mult(anchor, size)/2)
 	{
-		cube(size, center=true);
+		if(visible) cube(size, center=true);
 		assign($parent_size = size, $parent_type="box")
 			children();
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module rod(size=[1,1,1], h=undef, d=undef, r=undef, anchor=bottom) {
+module rod(size=[1,1,1], h=undef, d=undef, r=undef, anchor=bottom, visible=true) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size = d!=undef && h!=undef? [d,d,h] : size)
 	translate(-mult(anchor, size)/2)
 	{
-		resize(size) cylinder(d=size.x, h=size.z, center=true);
+		if(visible) resize(size) cylinder(d=size.x, h=size.z, center=true);
 		assign($parent_size = size, $parent_type="rod")
 			children();
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom) {
+module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom, visible=true) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size = d!=undef? [d,d,d] : size)
 	translate(-mult(anchor, size)/2)
 	{
-		resize(size) sphere(d=size.x, center=true);
+		if(visible) resize(size) sphere(d=size.x, center=true);
 		assign($parent_size = size, $parent_type="ball")
-			children();
-	}
-}
-// exposes functionality of box/rod/ball without creating an object
-module space(size, anchor=bottom) {
-	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
-	translate(-mult(anchor, size)/2)
-	{
-		assign($parent_size = size, $parent_type="space")
 			children();
 	}
 }
