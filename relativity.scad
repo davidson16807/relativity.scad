@@ -69,6 +69,7 @@ module bridge(){
 module mill(depth=-indeterminate){
 	difference(){
 		children(0);
+		if($children > 1)
 		for(i=[1:$children-1])
 			hull(){
 				translate([0,0,depth+2*indeterminate])
