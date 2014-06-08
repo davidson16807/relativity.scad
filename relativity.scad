@@ -1,3 +1,5 @@
+
+
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -5,6 +7,7 @@ indeterminate = 1e6;
 
 // an arbitrarily small number
 // must be nonzero to meet the assumptions of the library
+
 infinitesimal = 0.001;
 
 // helper variables for aligning along the z axis
@@ -22,6 +25,7 @@ $parent_type="space";
 
 //element-wise multiplication for vectors
 function mult(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
+
 
 // form repeating patterns through translation
 module translated(n, offset){
