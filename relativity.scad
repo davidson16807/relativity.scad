@@ -11,6 +11,9 @@ infinitesimal = 0.001;
 top = [0,0,1];
 center=[0,0,0];
 bottom = [0,0,-1];
+x = [1,0,0];
+y = [0,1,0];
+z = [0,0,1];
 
 // size of the last instance of rod/box/ball in the call stack
 $parent_size=[0,0,0];
@@ -46,23 +49,39 @@ module mirrored(axes=[0,0,0]){
 // like bridged(), but includes child modules in the render
 module bridged(){
 	difference(){
-		hull()
-			children();
+		hull() children();
 		for (i = [0 : $children-1])
-			hull()
-				children(i);
+			hull(){
+				translate([0,0,infinitesimal])  children(i);
+				translate([0,0,-infinitesimal]) children(i);
+			}
 	}
 	children();
 }
 // like hull(), but excludes the space around component parts to allow for combining detailed geometries
 module bridge(){
 	difference(){
-		hull()
-			children();
+		hull() children();
 		for (i = [0 : $children-1])
-			hull()
-				children(i);
+			hull(){
+				translate([0,0,infinitesimal])  children(i);
+				translate([0,0,-infinitesimal]) children(i);
+			}
 	}
+}
+
+module embed(){
+	difference(){
+		children(0);
+		if ($children > 1)
+		for (i = [1 : $children-1])
+			hull(){
+				translate([0,0,infinitesimal])  children(i);
+				translate([0,0,-infinitesimal]) children(i);
+			}
+	}
+	for (i = [1 : $children-1])
+		children(i);
 }
 
 //like difference(), but removes any overhang that may obstruct attempts to mill or print the resulting object
@@ -168,6 +187,7 @@ module orient(zaxis, roll=0){
 	rotate(	[-asin(zaxis.y / norm(zaxis)),
 		  		atan2(zaxis.x, zaxis.z),
 		  		0] )
+	rotate([0,0,roll])
 		children();
 }
 
