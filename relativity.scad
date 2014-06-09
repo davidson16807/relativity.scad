@@ -28,16 +28,15 @@ function mult(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
 // form repeating patterns through translation
-module translated(n, offset){
-	for(i=[0:n])
-		rotate(offset*i)
+module translated(offset, n=[0:1]){
+	for(i=n)
+		translate(offset*i)
 			children();
 }
 
 // form radially symmetric objects around the z axis
-module rotated(n, offset=undef){
-	assign(offset = offset==undef? [0,0,360/n]:offset)
-	for(i=[0:n])
+module rotated(offset, n=[0:1]){
+	for(i=n)
 		rotate(offset*i)
 			children();
 }
