@@ -162,10 +162,7 @@ module minkowski_difference(){
 		children(0);
 		minkowski() {
 			difference(){
-				minkowski() {
-					children(0);
-					children(1);
-				}
+				cube(indeterminate, center=true);
 				children(0);
 			}
 			children(1);
