@@ -1,5 +1,4 @@
 
-
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -223,7 +222,10 @@ module box(size, anchor=bottom, visible=true) {
 module rod(size=[1,1,1], h=undef, d=undef, r=undef, anchor=bottom, visible=true) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
-	assign(size = d!=undef && h!=undef? [d,d,h] : size)
+	assign(size =	len(size)==undef && size!= undef? 
+							[size,size,size] : 
+						d!=undef && h!=undef? 
+							[d,d,h] : size)
 	translate(-mult(anchor, size)/2)
 	{
 		if(visible) resize(size) cylinder(d=size.x, h=size.z, center=true);
@@ -235,7 +237,10 @@ module rod(size=[1,1,1], h=undef, d=undef, r=undef, anchor=bottom, visible=true)
 module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom, visible=true) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
-	assign(size = d!=undef? [d,d,d] : size)
+	assign(size =	len(size)==undef && size!= undef? 
+							[size,size,size] : 
+						d!=undef? 
+							[d,d,d] : size)
 	translate(-mult(anchor, size)/2)
 	{
 		if(visible) resize(size) sphere(d=size.x, center=true);
