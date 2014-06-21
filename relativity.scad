@@ -27,7 +27,7 @@ function mult(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
 // form repeating patterns through translation
-module translated(offset, n=[0:1]){
+module translated(offset, n=[-1:1]){
 	for(i=n)
 		translate(offset*i)
 			children();
@@ -116,42 +116,85 @@ module slice(height){
 	}
 }
 
-// hollows out object 
-// the resulting object has a thickness of n
-// useful for conserving on plastic
-module hollow(n){
-	difference(){
-		children();
-		translate([0,0,infinitesimal])  erode(n)children();
-		translate([0,0,-infinitesimal]) erode(n) children();
-	}
-}
 // forms a holder for an object along the xy plane 
 // the holder has a thickness of n
 // useful for interfacing with vitamins
-module wrap(n){
+module wrap(r, h=infinitesimal){
 	difference(){
-		hull() buffer(n) children();
-		translate([0,0,infinitesimal])  children();
-		translate([0,0,-infinitesimal]) children();
+		hull() buffer(r, h) children();
+		translated([0,0,infinitesimal], [-1,1]) children();
 	}
 }
 
+module smooth(r, h=infinitesimal){
+	blackhat(r,h) {
+		children();
+	}
+	open(r,h){
+		children();
+	}
+}
+
+module whitehat(r, h=infinitesimal){
+	difference(){
+		children();
+		translated([0,0,infinitesimal], [-1,1]) 
+			open(r,h) children();
+	}
+}
+
+module blackhat(r, h=infinitesimal){
+	difference(){
+		close(r,h) children();
+		translated([0,0,infinitesimal], [-1,1]) 
+			children();
+	}
+}
+
+// hollows out object 
+// the resulting object has a thickness of n
+// useful for conserving on plastic
+module shell(r, h=infinitesimal, center=false){
+	if(center)
+		difference(){
+			dilate(r/2, h) children();
+			translated([0,0,infinitesimal], [-1,1])
+				erode(r/2, h) children();
+		}
+	else if(r<0)
+		difference(){
+			children();
+			translated([0,0,infinitesimal], [-1,1])
+				erode(r, h) children();
+		}
+	else
+		difference(){
+			dilate(r, h) children();
+			translated([0,0,infinitesimal], [-1,1])
+				children();
+		}
+}
+module open(r, h=infinitesimal){
+	dilate(r, h) erode(r, h) children();
+}
+module close(r, h=infinitesimal){
+	erode(r, h) dilate(r, h) children();
+}
 // opposite of buffer, subtracts from perimeter along the xy plane
 // performs minkowski subtraction between children and a cylinder of set radius around the z axis
-module erode(n){
+module erode(r, h=infinitesimal){
 	minkowski_difference(){
 		children();
-		cylinder(r=n, h=infinitesimal, center=true);
+		cylinder(r=r, h=h, center=true);
 	} 
 }
 // buffers perimeter along the xy plane
 // performs minkowski addition between children and a cylinder of set radius around the z axis
-module buffer(n){
+module dilate(r, h=infinitesimal){
 	minkowski()
 	{
 		children();
-		cylinder(r=n, h=infinitesimal, center=true);
+		cylinder(r=r, h=h, center=true);
 	}
 }
 // performs minkowski subtraction - 
