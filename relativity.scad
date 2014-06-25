@@ -34,7 +34,7 @@ module translated(offset, n=[-1:1]){
 }
 
 // form radially symmetric objects around the z axis
-module rotated(offset, n=[0:1]){
+module rotated(offset, n=[-1:1]){
 	for(i=n)
 		rotate(offset*i)
 			children();
