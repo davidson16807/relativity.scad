@@ -1,4 +1,3 @@
-
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -13,13 +12,16 @@ infinitesimal = 0.001;
 top = [0,0,1];
 center=[0,0,0];
 bottom = [0,0,-1];
+up = [0,0,1];
+down = [0,0,-1];
 x = [1,0,0];
 y = [0,1,0];
 z = [0,0,1];
 
-// size of the last instance of rod/box/ball in the call stack
+// properties of the last instance of rod/box/ball in the call stack
 $parent_size=[0,0,0];
-// name of the last instance of rod/box/ball in the call stack
+$parent_bounds=[0,0,0];
+$parent_radius=0;
 $parent_type="space";
 
 //element-wise multiplication for vectors
@@ -216,9 +218,9 @@ module minkowski_difference(){
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
 module align(anchor=center, tilt=false){
-	translate(mult(anchor, $parent_size)/2)
+	translate(mult(anchor, $parent_bounds)/2)
 	if(tilt)
-		orient(mult(anchor, $parent_size))
+		orient(mult(anchor, $parent_bounds))
 		children();
 	else
 		children();
@@ -226,10 +228,8 @@ module align(anchor=center, tilt=false){
 
 // like rotate(), but works by aligning the zaxis to a given vector
 module orient(zaxis, roll=0){
-	rotate(	[-asin(zaxis.y / norm(zaxis)),
-		  		atan2(zaxis.x, zaxis.z),
-		  		0] )
-	rotate([0,0,roll])
+	rotate(_orient_angles(zaxis))
+	rotate(roll*z)
 		children();
 }
 
@@ -259,18 +259,29 @@ module box(size, anchor=bottom, visible=true) {
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module rod(size=[1,1,1], h=undef, d=undef, r=undef, anchor=bottom, visible=true) {
+module rod(size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=bottom, orientation=top, visible=true) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
 						d!=undef && h!=undef? 
 							[d,d,h] : size)
-	translate(-mult(anchor, size)/2)
+	assign(bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
+	assign($parent_size = size, 
+			$parent_type="rod",
+			$parent_bounds=[abs(bounds.x),abs(bounds.y),abs(bounds.z)],
+			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)))
+	translate(-mult(anchor, $parent_bounds)/2)
 	{
-		if(visible) resize(size) cylinder(d=size.x, h=size.z, center=true);
-		assign($parent_size = size, $parent_type="rod")
-			children();
+		echo($parent_bounds);
+		if(visible) 
+			orient(orientation) 
+			resize(size) 
+			cylinder(d=size.x, h=size.z, center=true);
+
+		children();
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
@@ -288,3 +299,28 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom, visible=true) {
 			children();
 	}
 }
+
+function _rotate_x_matrix(a)=
+							[[1,0,0,0], 
+                      [0,cos(a),-sin(a),0], 
+                      [0,sin(a),cos(a),0], 
+                      [0,0,0,1]]; 
+
+function _rotate_y_matrix(a)=
+							[[cos(a),0,sin(a),0], 
+                      [0,1,0,0], 
+                      [-sin(a),0,cos(a),0], 
+                      [0,0,0,1]]; 
+
+function _rotate_z_matrix(a)=
+							[[cos(a),-sin(a),0,0], 
+                      [sin(a),cos(a),0,0], 
+                      [0,0,1,0], 
+                      [0,0,0,1]]; 
+
+function _rotate_matrix(a)=_rotate_z_matrix(a.z)*_rotate_y_matrix(a.y)*_rotate_x_matrix(a.x);
+
+function _orient_angles(zaxis)=
+				[-asin(zaxis.y / norm(zaxis)),
+		  		 atan2(zaxis.x, zaxis.z),
+		  		 0];
