@@ -89,15 +89,17 @@ module embed(){
 }
 
 //like difference(), but removes any overhang that may obstruct attempts to mill or print the resulting object
-module mill(depth=-indeterminate){
+module mill(through=false, from=top){
+	assign(depth = through? -indeterminate : 0)
 	difference(){
 		children(0);
 		if($children > 1)
 		for(i=[1:$children-1])
-			hull(){
-				translate([0,0,depth+2*indeterminate])
+			hull()
+			orient(from){
+				translate(indeterminate*z)
 					children(i);
-				translate([0,0,depth])
+				translate(depth*z)
 					children(i);
 			}
 	}
@@ -109,6 +111,7 @@ module bed(cut, height, center=false){
 	projection(cut=cut)
 		children();
 }
+
 // slices the object around its bed
 // also useful for forming beds
 module slice(height){
@@ -130,26 +133,46 @@ module wrap(r, h=infinitesimal){
 
 module smooth(r, h=infinitesimal){
 	blackhat(r,h) {
-		children();
-	}
+		children(0);
+		if($children > 1)
+			children(1)
+		if($children <= 1)
+			cylinder(r=r, h=h, center=true);
+	} 
 	open(r,h){
-		children();
-	}
+		children(0);
+		if($children > 1)
+			children(1)
+		if($children <= 1)
+			cylinder(r=r, h=h, center=true);
+	} 
 }
 
 module whitehat(r, h=infinitesimal){
 	difference(){
-		children();
+		children(0);
 		translated([0,0,infinitesimal], [-1,1]) 
-			open(r,h) children();
+		open(r,h){
+			children(0);
+			if($children > 1)
+				children(1)
+			if($children <= 1)
+				cylinder(r=r, h=h, center=true);
+		} 
 	}
 }
 
 module blackhat(r, h=infinitesimal){
 	difference(){
-		close(r,h) children();
-		translated([0,0,infinitesimal], [-1,1]) 
-			children();
+		close(r,h) {
+			children(0);
+			if($children > 1)
+				children(1)
+			if($children <= 1)
+				cylinder(r=r, h=h, center=true);
+		} 
+		translated([0,0,infinitesimal], [-1,1])
+			children(0);
 	}
 }
 
@@ -176,18 +199,34 @@ module shell(r, h=infinitesimal, center=false){
 				children();
 		}
 }
+
 module open(r, h=infinitesimal){
-	dilate(r, h) erode(r, h) children();
+	dilate(r, h) erode(r, h){
+		children(0);
+		if($children > 1)
+			children(1)
+		if($children <= 1)
+			cylinder(r=r, h=h, center=true);
+	} 
 }
 module close(r, h=infinitesimal){
-	erode(r, h) dilate(r, h) children();
+	erode(r, h) dilate(r, h){
+		children(0);
+		if($children > 1)
+			children(1)
+		if($children <= 1)
+			cylinder(r=r, h=h, center=true);
+	} 
 }
 // opposite of buffer, subtracts from perimeter along the xy plane
 // performs minkowski subtraction between children and a cylinder of set radius around the z axis
 module erode(r, h=infinitesimal){
 	minkowski_difference(){
-		children();
-		cylinder(r=r, h=h, center=true);
+		children(0);
+		if($children > 1)
+			children(1)
+		if($children <= 1)
+			cylinder(r=r, h=h, center=true);
 	} 
 }
 // buffers perimeter along the xy plane
@@ -195,8 +234,11 @@ module erode(r, h=infinitesimal){
 module dilate(r, h=infinitesimal){
 	minkowski()
 	{
-		children();
-		cylinder(r=r, h=h, center=true);
+		children(0);
+		if($children > 1)
+			children(1)
+		if($children <= 1)
+			cylinder(r=r, h=h, center=true);
 	}
 }
 // performs minkowski subtraction - 
@@ -204,7 +246,7 @@ module dilate(r, h=infinitesimal){
 // very useful for forming inverse fillets
 module minkowski_difference(){
 	difference(){
-		children(0);
+		cube(indeterminate, center=true);
 		minkowski() {
 			difference(){
 				cube(indeterminate, center=true);
