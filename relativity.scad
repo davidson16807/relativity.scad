@@ -296,7 +296,7 @@ module box(size, anchor=bottom, visible=true) {
 	translate(-mult(anchor, size)/2)
 	{
 		if(visible) cube(size, center=true);
-		assign($parent_size = size, $parent_type="box")
+		assign($parent_size = size, $parent_type="box", $parent_bounds = size )
 			children();
 	}
 }
@@ -334,10 +334,10 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom, visible=true) {
 							[size,size,size] : 
 						d!=undef? 
 							[d,d,d] : size)
-	translate(-mult(anchor, size)/2)
+	translate(-mult(anchor, $parent_bounds)/2)
 	{
 		if(visible) resize(size) sphere(d=size.x, center=true);
-		assign($parent_size = size, $parent_type="ball")
+		assign($parent_size = size, $parent_type="ball", $parent_bounds = size)
 			children();
 	}
 }
