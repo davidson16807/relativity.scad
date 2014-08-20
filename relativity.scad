@@ -24,6 +24,9 @@ $parent_bounds=[0,0,0];
 $parent_radius=0;
 $parent_type="space";
 
+//inhereted properties common to all geometric primitives in relativity.scad
+$show = true;
+
 //element-wise multiplication for vectors
 function mult(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
@@ -106,17 +109,17 @@ module mill(through=false, from=top){
 }
 // like project(), but returns a 3d object of given height
 // useful for forming reliable beds for printed objects
-module bed(cut, height, center=false){
-	linear_extrude(height=height, center=center) 
+module bed(cut, h, center=false){
+	linear_extrude(height=h, center=center) 
 	projection(cut=cut)
 		children();
 }
 
 // slices the object around its bed
 // also useful for forming beds
-module slice(height){
+module slice(h){
 	intersection(){
-		box([indeterminate, indeterminate, height]);
+		box([indeterminate, indeterminate, h]);
 		children();
 	}
 }
@@ -291,11 +294,11 @@ module parent(size=undef, anchor=center){
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
-module box(size, anchor=bottom, visible=true) {
+module box(size, anchor=bottom) {
 	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
 	translate(-mult(anchor, size)/2)
 	{
-		if(visible) cube(size, center=true);
+		if($show) cube(size, center=true);
 		assign($parent_size = size, $parent_type="box", $parent_bounds = size )
 			children();
 	}
@@ -303,13 +306,14 @@ module box(size, anchor=bottom, visible=true) {
 // wrapper for cylinder with enhanced centering functionality and cascading children
 module rod(size=[1,1,1], 
 			h=undef, d=undef, r=undef, 
-			anchor=bottom, orientation=top, visible=true) {
+			anchor=bottom, orientation=top) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
 						d!=undef && h!=undef? 
-							[d,d,h] : size)
+							[d,d,h] : 
+						size)
 	assign(bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
 	assign($parent_size = size, 
 			$parent_type="rod",
@@ -318,7 +322,7 @@ module rod(size=[1,1,1],
 	translate(-mult(anchor, $parent_bounds)/2)
 	{
 		echo($parent_bounds);
-		if(visible) 
+		if($show) 
 			orient(orientation) 
 			resize(size) 
 			cylinder(d=size.x, h=size.z, center=true);
@@ -327,16 +331,17 @@ module rod(size=[1,1,1],
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom, visible=true) {
+module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
 						d!=undef? 
-							[d,d,d] : size)
+							[d,d,d] : 
+						size)
 	translate(-mult(anchor, $parent_bounds)/2)
 	{
-		if(visible) resize(size) sphere(d=size.x, center=true);
+		if($show) resize(size) sphere(d=size.x, center=true);
 		assign($parent_size = size, $parent_type="ball", $parent_bounds = size)
 			children();
 	}
