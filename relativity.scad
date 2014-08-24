@@ -305,13 +305,13 @@ module box(size, anchor=bottom) {
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
 module rod(size=[1,1,1], 
-			h=undef, d=undef, r=undef, 
+			h=indeterminate, d=indeterminate, r=undef, 
 			anchor=bottom, orientation=top) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
-						d!=undef && h!=undef? 
+						d<indeterminate-1 || h<indeterminate-1? 
 							[d,d,h] : 
 						size)
 	assign(bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
