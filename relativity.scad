@@ -14,13 +14,9 @@ center=[0,0,0];
 bottom = [0,0,-1];
 up = [0,0,1];
 down = [0,0,-1];
-x	= [1,0,0];
-y	= [0,1,0];
-z	= [0,0,1];
-xy	= [1,1,0];
-xz	= [1,0,1];
-yz	= [0,1,1];
-xyz= [1,1,1];
+x = [1,0,0];
+y = [0,1,0];
+z = [0,0,1];
 
 // properties of the last instance of rod/box/ball in the call stack
 $parent_size=[0,0,0];
@@ -133,7 +129,7 @@ module slice(h){
 // useful for interfacing with vitamins
 module wrap(r, h=infinitesimal){
 	difference(){
-		hull() dilate(r, h) children();
+		hull() buffer(r, h) children();
 		translated([0,0,infinitesimal], [-1,1]) children();
 	}
 }
@@ -282,16 +278,6 @@ module orient(zaxis, roll=0){
 		children();
 }
 
-// wrapper for translate() that tracks absolute position
-module move(offsets){
-	
-}
-
-// wrapper for rotate() that tracks absolute position
-module turn(angles){
-	
-}
-
 // duplicates last instance of box/rod/ball in the call stack
 // useful for performing hull() or difference() between parent and child 
 module parent(size=undef, anchor=center){
@@ -319,13 +305,13 @@ module box(size, anchor=bottom) {
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
 module rod(size=[1,1,1], 
-			h=undef, d=undef, r=undef, 
+			h=indeterminate, d=indeterminate, r=undef, 
 			anchor=bottom, orientation=top) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
-						d!=undef && h!=undef? 
+						d<indeterminate-1 || h<indeterminate-1? 
 							[d,d,h] : 
 						size)
 	assign(bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
