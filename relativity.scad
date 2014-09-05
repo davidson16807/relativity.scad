@@ -296,12 +296,15 @@ module parent(size=undef, anchor=center){
 // wrapper for cube with enhanced centering functionality and cascading children
 module box(size, anchor=bottom) {
 	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
+	assign($parent_size = size, 
+			$parent_type="box", 
+			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
+							size.y < indeterminate/2? size.y : 0,
+							size.z < indeterminate/2? size.z : 0] )
 	translate(-mult(anchor, size)/2)
-	{
 		if($show) cube(size, center=true);
-		assign($parent_size = size, $parent_type="box", $parent_bounds = size )
-			children();
-	}
+	translate(-mult(anchor, $parent_bounds)/2)
+		children();
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
 module rod(size=[1,1,1], 
@@ -317,18 +320,19 @@ module rod(size=[1,1,1],
 	assign(bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
 	assign($parent_size = size, 
 			$parent_type="rod",
-			$parent_bounds=[abs(bounds.x),abs(bounds.y),abs(bounds.z)],
+			$parent_bounds=[abs(bounds.x) < indeterminate/2? abs(bounds.x) : 0,
+							abs(bounds.y) < indeterminate/2? abs(bounds.y) : 0,
+							abs(bounds.z) < indeterminate/2? abs(bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)))
-	translate(-mult(anchor, $parent_bounds)/2)
-	{
-		echo($parent_bounds);
+	translate(-mult(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
+		echo(bounds);
 		if($show) 
 			orient(orientation) 
 			resize(size) 
 			cylinder(d=size.x, h=size.z, center=true);
-
-		children();
 	}
+	translate(-mult(anchor, $parent_bounds)/2)
+		children();
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
 module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom) {
@@ -339,12 +343,15 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom) {
 						d!=undef? 
 							[d,d,d] : 
 						size)
-	translate(-mult(anchor, $parent_bounds)/2)
-	{
+	assign($parent_size = size, 
+			$parent_type="ball", 
+			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
+							size.y < indeterminate/2? size.y : 0,
+							size.z < indeterminate/2? size.z : 0] )
+	translate(-mult(anchor, size)/2)
 		if($show) resize(size) sphere(d=size.x, center=true);
-		assign($parent_size = size, $parent_type="ball", $parent_bounds = size)
-			children();
-	}
+	translate(-mult(anchor, $parent_bounds)/2)
+		children();
 }
 
 function _rotate_x_matrix(a)=
