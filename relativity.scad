@@ -25,9 +25,14 @@ $parent_radius=0;
 $parent_type="space";
 
 //inhereted properties common to all geometric primitives in relativity.scad
+// whether to render primitives, in general
 $show = true;
+// whether to render objects marked as negative space
+$negative = true;
+// whether to render objects marked as positive space
+$positive = true;
 
-//element-wise hammardiplication for vectors
+//element-wise hammard product for vectors
 function hammard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
@@ -50,6 +55,17 @@ module mirrored(axes=[0,0,0]){
 	mirror(axes)
 		children();
 		children();
+}
+
+// performs the union on objects marked as positive space (i.e. objects where $show = $positive), 
+// and performs the difference for objects marked as negative space (i.e objects where $show = $negative)
+module construct(){
+	difference(){
+		assign($positive=true, $negative=false)
+			children();
+		assign($positive=false, $negative=true)
+			children();
+	}
 }
 
 
