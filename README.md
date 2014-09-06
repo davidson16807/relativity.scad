@@ -27,19 +27,19 @@ The library also provides a number of helper functions relevant to generating pr
 
 Module | Description
 --------- | --------------
-[[construct]] | enables support for positive and negative spaces
+[construct](https://github.com/davidson16807/relativity.scad/wiki/construct) | enables support for positive and negative spaces
 slice | returns a 3d slice of the object with a given height 
 bed | projects an object and extrudes a 3d object from it; good for aking printable beds 
-mill | like difference(), but removes any overhang that may obstruct ttempts to mill or print an object 
-bridge | like hull(), but excludes the hulls for individual child bjects to allow combining detailed geometries 
-bridged | variant of bridge() that includes child objects in the result 
+mill | like `difference()`, but removes any overhang that may obstruct ttempts to mill or print an object 
+bridge | like `hull()`, but excludes the hulls for individual child bjects to allow combining detailed geometries 
+bridged | variant of `bridge()` that includes child objects in the result 
 
 as well as functions relevant to generating repeated patterns:
 
 Module | Description
 --------- | --------------
-mirrored | form bilaterally symmetric objects using the mirror() function 
-rotated | form radially symmetric objects by repeated calls to rotate() 
-translated | form repeating patterns by repeated calls to translate() 
+mirrored | form bilaterally symmetric objects using the `mirror()` function 
+rotated | form radially symmetric objects by repeated calls to `rotate()` 
+translated | form repeating patterns by repeated calls to `translate() `
 
 For more information, check out the [wiki](https://github.com/davidson16807/relativity.scad/wiki)!
