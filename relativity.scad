@@ -27,8 +27,8 @@ $parent_type="space";
 //inhereted properties common to all geometric primitives in relativity.scad
 $show = true;
 
-//element-wise multiplication for vectors
-function mult(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
+//element-wise hammardiplication for vectors
+function hammard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
 // form repeating patterns through translation
@@ -263,9 +263,9 @@ module minkowski_difference(){
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
 module align(anchor=center, tilt=false){
-	translate(mult(anchor, $parent_bounds)/2)
+	translate(hammard(anchor, $parent_bounds)/2)
 	if(tilt)
-		orient(mult(anchor, $parent_bounds))
+		orient(hammard(anchor, $parent_bounds))
 		children();
 	else
 		children();
@@ -301,9 +301,9 @@ module box(size, anchor=bottom) {
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0] ){
-		translate(-mult(anchor, size)/2)
+		translate(-hammard(anchor, size)/2)
 			if($show) cube(size, center=true);
-		translate(-mult(anchor, $parent_bounds)/2)
+		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -325,13 +325,13 @@ module rod(size=[1,1,1],
 							abs(bounds.y) < indeterminate/2? abs(bounds.y) : 0,
 							abs(bounds.z) < indeterminate/2? abs(bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2))){
-		translate(-mult(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
+		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
 			if($show) 
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
 		}
-		translate(-mult(anchor, $parent_bounds)/2)
+		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -349,9 +349,9 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom) {
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0] ){
-		translate(-mult(anchor, size)/2)
+		translate(-hammard(anchor, size)/2)
 			if($show) resize(size) sphere(d=size.x, center=true);
-		translate(-mult(anchor, $parent_bounds)/2)
+		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
