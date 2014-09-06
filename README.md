@@ -27,11 +27,7 @@ The library also provides a number of helper functions relevant to generating pr
 
 Module | Description
 --------- | --------------
-minkowski subtraction | subtracts one child object from the perimeter of nother 
-buffer | adds to an object's perimeter along the xy plane 
-erode | subtracts from an object's perimeter along the xy plane 
-wrap | returns  an object that wraps around a given child along the xy lane 
-hollow | hollows out an object along the xy plane |
+[[construct]] | enables support for positive and negative spaces
 slice | returns a 3d slice of the object with a given height 
 bed | projects an object and extrudes a 3d object from it; good for aking printable beds 
 mill | like difference(), but removes any overhang that may obstruct ttempts to mill or print an object 
@@ -46,4 +42,4 @@ mirrored | form bilaterally symmetric objects using the mirror() function
 rotated | form radially symmetric objects by repeated calls to rotate() 
 translated | form repeating patterns by repeated calls to translate() 
 
-For more information, check out the upcoming [wiki](https://github.com/davidson16807/relativity.scad/wiki)!
+For more information, check out the [wiki](https://github.com/davidson16807/relativity.scad/wiki)!
