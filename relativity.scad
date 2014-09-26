@@ -61,9 +61,9 @@ module mirrored(axes=[0,0,0]){
 // and performs the difference for objects marked as negative space (i.e objects where $show = $negative)
 module construct(){
 	difference(){
-		assign($positive=true, $negative=false)
+		assign($positive=true, $negative=false, $show=true)
 			children();
-		assign($positive=false, $negative=true)
+		assign($positive=false, $negative=true, $show=false)
 			children();
 	}
 }
@@ -123,6 +123,14 @@ module mill(through=false, from=top){
 			}
 	}
 }
+
+// like bed(), but includes children
+// useful for forming reliable beds for printed objects
+module bedded(cut, h, center=false){
+	bed(cut, h, center) children();
+	children();
+}
+
 // like project(), but returns a 3d object of given height
 // useful for forming reliable beds for printed objects
 module bed(cut, h, center=false){
