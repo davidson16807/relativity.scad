@@ -5,7 +5,7 @@ include <relativity.scad>
 // useful for interfacing with vitamins
 module wrap(r, h=infinitesimal){
 	difference(){
-		hull() buffer(r, h) children();
+		hull() dilate(r, h) children();
 		translated([0,0,infinitesimal], [-1,1]) children();
 	}
 }
@@ -114,10 +114,7 @@ module dilate(r, h=infinitesimal){
 	minkowski()
 	{
 		children(0);
-		if($children > 1)
-			children(1)
-		if($children <= 1)
-			cylinder(r=r, h=h, center=true);
+		cylinder(r=r, h=h, center=true);
 	}
 }
 // performs minkowski subtraction - 
