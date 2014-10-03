@@ -60,6 +60,7 @@ module mirrored(axes=[0,0,0]){
 // performs the union on objects marked as positive space (i.e. objects where $show = $positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $show = $negative)
 module construct(){
+	if($show)
 	difference(){
 		assign($positive=true, $negative=false, $show=true)
 			children();
