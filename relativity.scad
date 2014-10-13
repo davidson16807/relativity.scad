@@ -151,12 +151,9 @@ module slice(h){
 
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
-module align(anchor=center, tilt=false){
+module align(anchor){
 	translate(hammard(anchor, $parent_bounds)/2)
-	if(tilt)
-		orient(hammard(anchor, $parent_bounds))
-		children();
-	else
+	assign($outward = anchor, $inward = -anchor)
 		children();
 }
 
