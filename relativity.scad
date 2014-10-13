@@ -110,6 +110,7 @@ module embed(){
 
 //like difference(), but removes any overhang that may obstruct attempts to mill or print the resulting object
 module mill(through=false, from=top){
+	echo('WARNING: mill() is depreciated, use hull($show=$negative) with translated() to indicate areas you wish to mill');
 	assign(depth = through? -indeterminate : 0)
 	difference(){
 		children(0);
@@ -128,6 +129,7 @@ module mill(through=false, from=top){
 // like bed(), but includes children
 // useful for forming reliable beds for printed objects
 module bedded(cut, h, center=false){
+	echo('WARNING: bedded() is depreciated, use linear_extrude() with projection() for the same effect');
 	bed(cut, h, center) children();
 	children();
 }
@@ -135,6 +137,8 @@ module bedded(cut, h, center=false){
 // like project(), but returns a 3d object of given height
 // useful for forming reliable beds for printed objects
 module bed(cut, h, center=false){
+	echo('WARNING: bed() is depreciated, use linear_extrude() with projection() for the same effect');
+
 	linear_extrude(height=h, center=center) 
 	projection(cut=cut)
 		children();
@@ -143,6 +147,7 @@ module bed(cut, h, center=false){
 // slices the object around its bed
 // also useful for forming beds
 module slice(h){
+	echo('WARNING: slice() is depreciated, use box(indeterminate, $show=$negative) to indicate areas you do not wish to render');
 	intersection(){
 		box([indeterminate, indeterminate, h]);
 		children();
