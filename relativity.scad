@@ -151,10 +151,14 @@ module slice(h){
 
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
-module align(anchor){
-	translate(hammard(anchor, $parent_bounds)/2)
-	assign($outward = anchor, $inward = -anchor)
-		children();
+module align(anchors){
+	assign(anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors)
+	for(anchor=anchors)
+	{
+		translate(hammard(anchor, $parent_bounds)/2)
+		assign($outward = anchor, $inward = -anchor)
+			children();
+	}
 }
 
 // like rotate(), but works by aligning the zaxis to a given vector
