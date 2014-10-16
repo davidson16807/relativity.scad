@@ -195,7 +195,9 @@ module box(size, anchor=$inward) {
 			$parent_type="box", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
-							size.z < indeterminate/2? size.z : 0] ){
+							size.z < indeterminate/2? size.z : 0],
+			$inward=center, 
+			$outward=center ){
 		translate(-hammard(anchor, size)/2)
 			if($show) cube(size, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
@@ -219,7 +221,9 @@ module rod(size=[1,1,1],
 			$parent_bounds=[abs(bounds.x) < indeterminate/2? abs(bounds.x) : 0,
 							abs(bounds.y) < indeterminate/2? abs(bounds.y) : 0,
 							abs(bounds.z) < indeterminate/2? abs(bounds.z) : 0],
-			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2))){
+			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
+			$inward=center, 
+			$outward=center){
 		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
 			if($show) 
 				orient(orientation) 
@@ -243,7 +247,9 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$parent_type="ball", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
-							size.z < indeterminate/2? size.z : 0] ){
+							size.z < indeterminate/2? size.z : 0],
+			$inward=center, 
+			$outward=center ){
 		translate(-hammard(anchor, size)/2)
 			if($show) resize(size) sphere(d=size.x, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
