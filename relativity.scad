@@ -25,26 +25,24 @@ $parent_radius=0;
 $parent_type="space";
 
 //inhereted properties common to all geometric primitives in relativity.scad
-// whether to render primitives, in general
-$show = true;
-// whether to render objects marked as negative space
-$negative = true;
-// whether to render objects marked as positive space
-$positive = true;
+// indicates the class to render
+$show = "";
+// indicates the class that is either assigned-to or inherited-by an object
+$class = "";
 
 //hammard product (aka "component-wise" product) for vectors
 function hammard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
 // form repeating patterns through translation
-module translated(offset, n=[-1:1]){
+module translated(offset, n=[1]){
 	for(i=n)
 		translate(offset*i)
 			children();
 }
 
 // form radially symmetric objects around the z axis
-module rotated(offset, n=[-1:1]){
+module rotated(offset, n=[1]){
 	for(i=n)
 		rotate(offset*i)
 			children();
@@ -57,14 +55,34 @@ module mirrored(axes=[0,0,0]){
 		children();
 }
 
-// performs the union on objects marked as positive space (i.e. objects where $show = $positive), 
-// and performs the difference for objects marked as negative space (i.e objects where $show = $negative)
-module construct(){
-	if($show)
+module hulled(class=""){
+	if(_is_match($class, $show))
+	hull()
+	assign($show=class)
+	children();
+
+	children();
+}
+
+// performs the union on objects marked as positive space (i.e. objects where $class = positive), 
+// and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
+module differed(positive, negative){
+	if(_is_match($class, $show))
 	difference(){
-		assign($positive=true, $negative=false, $show=true)
+		assign($show=positive)
 			children();
-		assign($positive=false, $negative=true, $show=false)
+		assign($show=negative)
+			children();
+	}
+}
+
+// performs the intersection on a list of object classes
+module intersected(class=""){
+	if(_is_match($class, $show))
+	intersection(){
+		assign($show=positive)
+			children();
+		assign($show=negative)
 			children();
 	}
 }
@@ -106,15 +124,15 @@ module parent(size=undef, anchor=center){
 // wrapper for cube with enhanced centering functionality and cascading children
 module box(size, anchor=$inward) {
 	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
-	assign($parent_size = size, 
+	assign( $parent_size = size, 
 			$parent_type="box", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$inward=center, 
-			$outward=center ){
+			$outward=center){
 		translate(-hammard(anchor, size)/2)
-			if($show) cube(size, center=true);
+			if(_is_match($class, $show)) cube(size, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -140,7 +158,7 @@ module rod(size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
-			if($show) 
+			if(_is_match($class, $show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
@@ -166,7 +184,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$inward=center, 
 			$outward=center ){
 		translate(-hammard(anchor, size)/2)
-			if($show) resize(size) sphere(d=size.x, center=true);
+			if(_is_match($class, $show)) resize(size) sphere(d=size.x, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -197,110 +215,5 @@ function _orient_angles(zaxis)=
 		  		 atan2(zaxis.x, zaxis.z),
 		  		 0];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//DEPRECIATED
-// like bridged(), but includes child modules in the render
-module bridged(){
-	difference(){
-		hull() children();
-		for (i = [0 : $children-1])
-			hull(){
-				translate([0,0,infinitesimal])  children(i);
-				translate([0,0,-infinitesimal]) children(i);
-			}
-	}
-	children();
-}
-// like hull(), but excludes the space around component parts to allow for combining detailed geometries
-module bridge(){
-	difference(){
-		hull() children();
-		for (i = [0 : $children-1])
-			hull(){
-				translate([0,0,infinitesimal])  children(i);
-				translate([0,0,-infinitesimal]) children(i);
-			}
-	}
-}
-
-module embed(){
-	difference(){
-		children(0);
-		if ($children > 1)
-		for (i = [1 : $children-1])
-			hull(){
-				translate([0,0,infinitesimal])  children(i);
-				translate([0,0,-infinitesimal]) children(i);
-			}
-	}
-	for (i = [1 : $children-1])
-		children(i);
-}
-
-//like difference(), but removes any overhang that may obstruct attempts to mill or print the resulting object
-module mill(through=false, from=top){
-	echo("WARNING: mill() is depreciated, use hull($show=$negative) with translated() to indicate areas you wish to mill");
-	assign(depth = through? -indeterminate : 0)
-	difference(){
-		children(0);
-		if($children > 1)
-		for(i=[1:$children-1])
-			hull()
-			orient(from){
-				translate(indeterminate*z)
-					children(i);
-				translate(depth*z)
-					children(i);
-			}
-	}
-}
-
-// like bed(), but includes children
-// useful for forming reliable beds for printed objects
-module bedded(cut, h, center=false){
-	echo("WARNING: bedded() is depreciated, use linear_extrude() with projection() for the same effect");
-	bed(cut, h, center) children();
-	children();
-}
-
-// like project(), but returns a 3d object of given height
-// useful for forming reliable beds for printed objects
-module bed(cut, h, center=false){
-	echo("WARNING: bed() is depreciated, use linear_extrude() with projection() for the same effect");
-
-	linear_extrude(height=h, center=center) 
-	projection(cut=cut)
-		children();
-}
-
-// slices the object around its bed
-// also useful for forming beds
-module slice(h){
-	echo("WARNING: slice() is depreciated, use box(indeterminate, $show=$negative) to indicate areas you do not wish to render");
-	intersection(){
-		box([indeterminate, indeterminate, h]);
-		children();
-	}
-}
+function _is_match(class, selector) = 
+	len(search(selector, class)) > 0 || selector == "";
