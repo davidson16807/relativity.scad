@@ -189,7 +189,7 @@ module parent(size=undef, anchor=center){
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
-module box(size, anchor=bottom) {
+module box(size, anchor=$inward) {
 	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
 	assign($parent_size = size, 
 			$parent_type="box", 
@@ -205,7 +205,7 @@ module box(size, anchor=bottom) {
 // wrapper for cylinder with enhanced centering functionality and cascading children
 module rod(size=[1,1,1], 
 			h=indeterminate, d=indeterminate, r=undef, 
-			anchor=bottom, orientation=top) {
+			anchor=$inward, orientation=top) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
@@ -231,7 +231,7 @@ module rod(size=[1,1,1],
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module ball(size=[1,1,1], d=undef, r=undef, anchor=bottom) {
+module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
