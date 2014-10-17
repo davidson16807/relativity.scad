@@ -9,37 +9,30 @@ To do so, the library introduces a new set of modules to replace the default geo
 
 So this:  
 
-	translate([0,0,cube_height/2]){  
-		cube(cube_height, center=true);  
+	cube_h=10;
+	cylinder_d=7;
+	*translate([0,0,cube_h/2]){  
+		cube(cube_h, center=true);  
 	  
-		translate([cube_height/2,0,0])  
-		rotate([0,90,0])  
-		cylinder(d=cube_height/4, h=cube_height);  
+		translate([cube_h/2 + cylinder_d/2,0,0])
+		cylinder(d=cylinder_d, h=cube_h, center=true);  
 	}  
 
 becomes this:  
 
-	box(50, anchor=[0,0,-1])  
-	align([1,0,0], tilt=true)  
-	rod(d=$parent_size.x/4, h=$parent_size.z);  
+	box(10, anchor=[0,0,-1])
+	align([1,0,0])
+	rod(d=7, h=$parent_size.z);
 
-The library also provides a number of helper functions relevant to generating printable models
-
-Module | Description
---------- | --------------
-[construct](https://github.com/davidson16807/relativity.scad/wiki/construct) | enables support for positive and negative spaces
-slice | returns a 3d slice of the object with a given height 
-bed | projects an object and extrudes a 3d object from it; good for aking printable beds 
-mill | like `difference()`, but removes any overhang that may obstruct ttempts to mill or print an object 
-bridge | like `hull()`, but excludes the hulls for individual child bjects to allow combining detailed geometries 
-bridged | variant of `bridge()` that includes child objects in the result 
-
-as well as functions relevant to generating repeated patterns:
+The library also includes a number of optional replacement modules that help to perform CSG operations while using this new approach 
 
 Module | Description
 --------- | --------------
 mirrored | form bilaterally symmetric objects using the `mirror()` function 
 rotated | form radially symmetric objects by repeated calls to `rotate()` 
 translated | form repeating patterns by repeated calls to `translate() `
+[hulled](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hulled) | performs `hull` between objects of a given class
+[intersected](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#intersected) | performs `difference` between objects of a given class
+[differed](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#differed) | performs `difference` between one class of objects and another
 
 For more information, check out the [wiki](https://github.com/davidson16807/relativity.scad/wiki)!
