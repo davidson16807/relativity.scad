@@ -25,8 +25,9 @@ $parent_radius=0;
 $parent_type="space";
 
 //inhereted properties common to all geometric primitives in relativity.scad
-// indicates the class to render
+// indicates the class(es) to render
 $show = "";
+$hide = "";
 // indicates the class that is either assigned-to or inherited-by an object
 $class = "";
 
@@ -215,5 +216,32 @@ function _orient_angles(zaxis)=
 		  		 atan2(zaxis.x, zaxis.z),
 		  		 0];
 
-function _is_match(class, selector) = 
-	len(search(selector, class)) > 0 || selector == "";
+// string functions
+//echo(_is_match("screw head hull", "foo"));
+
+function _is_match(classes, selector, index=0, sep=" ") = 
+	selector == "" ||
+	(index <= len(search(" ", classes,0)[0]))?
+		(split(classes, index, sep) == selector)?
+			true
+			:
+			_is_match(classes, selector, index+1)
+		:
+		false
+	;
+
+function split(str, index=0, char=" ") = 
+	(index==0) ? 
+		(len(search(char, str)) > 0)?
+			substring(str, 0, search(char, str)[0]) //everything to the next
+			:
+			substring(str, 0) 			//everything after
+		: 
+		(len(search(char, str, 0)) >= index-1)?
+			split(   substring(str, search(" ", str)[0]+1), index-1, char) //recurse
+			:
+			undef					//not found
+	;
+
+function substring(data, start, length=0) = (length == 0) ? _substring(data, start, len(data)) : _substring(data, start, length+start);
+function _substring(str, start, end) = (start==end) ? "" : str(str[start], _substring(str, start+1, end));
