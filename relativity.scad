@@ -234,13 +234,20 @@ function token(string, seperator=" ", index=0, ignore_case = false) =
 	before(after(string, seperator, index-1, ignore_case), 
 			     seperator, 0, ignore_case);
 
-//echo(replace("foobar", "OO", "u", ignore_case=true));
-//echo(after("foo bar baz", index=0));
+//echo(replace("foobar spam nOOb", "OO", "u", ignore_case=true));
 function replace(string, replaced, replacement, ignore_case=false) = 
+	find(string, replaced, ignore_case=ignore_case) != undef?
+		replace(_replace(string, replaced, replacement, ignore_case),
+					 replaced, replacement, ignore_case)
+	:
+		string
+	;
+function _replace(string, replaced, replacement, ignore_case=false) = 
 	str(	before(string, replaced, ignore_case=ignore_case), 
 		replacement, 
 		after(string, replaced, ignore_case=ignore_case));
 
+//echo(before("foo bar baz", index=0));
 function before(string, seperator=" ", index=0, ignore_case=false) = 
 	string == undef?
 		undef
@@ -251,6 +258,7 @@ function before(string, seperator=" ", index=0, ignore_case=false) =
 	:
 		string
 	;
+//echo(after("foo bar baz", index=0));
 function after(string, seperator=" ", index=0, ignore_case=false) =
 	string == undef?
 		undef
