@@ -218,47 +218,51 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 // string functions
-
-
-
 //function _has_tokens(string, tokens, seperator=" ", index=0) = 
 
+echo(_has_token("foo bar baz", "baz"));
 function _has_token(string, token, seperator=" ", index=0) = 		
-	token(string, index, seperator) == token ? 		//match?
-		true						//then I guess we found a token				
-	: after(string, index, seperator) == "" ? 		//no more tokens?
+	token(string, seperator, index) == token ? 		//match?
+		true						//then I guess we found a token		
+	: after(string, seperator, index) == "" ? 		//no more tokens?
 		false						//then I guess there aren't any matches
 	:							
 		_has_token(string, token, seperator, index+1)	//otherwise, try again
 	;
 
-function token(string, index=0, seperator=" ") = 
-	before(after(string, 	index-1, seperator),
-				0, 	 seperator);
+function token(string, seperator=" ", index=0, ignore_case = false) = 
+	before(after(string, seperator, index-1, ignore_case), 
+			     seperator, 0, ignore_case);
 
-function before(string, index=0, seperator=" ") = 
+//echo(replace("foobar", "OO", "u", ignore_case=true));
+//echo(after("foo bar baz", index=0));
+function replace(string, replaced, replacement, ignore_case=false) = 
+	str(	before(string, replaced, ignore_case=ignore_case), 
+		replacement, 
+		after(string, replaced, ignore_case=ignore_case));
+
+function before(string, seperator=" ", index=0, ignore_case=false) = 
 	string == undef?
 		undef
 	: index < 0?
 		""
-	: len(search(seperator, string, 0)[0]) > index?
-		substring(string, 0, search(seperator, string, 0)[0][index])
+	: find(string, seperator, index, ignore_case) != undef?
+		substring(string, 0, find(string, seperator, index, ignore_case))
 	:
 		string
 	;
-
-function after(string, index=0, seperator=" ") =
+function after(string, seperator=" ", index=0, ignore_case=false) =
 	string == undef?
 		undef
 	: index < 0?
 		string
-	: len(search(seperator, string, 0)[0]) > index ?
-		substring(string, search(seperator, string, 0)[0][index]+len(seperator))
+	: find(string, seperator, index, ignore_case) != undef ?
+		substring(string, find(string, seperator, index, ignore_case) + len(seperator))
 	:
 		""
 	;
 
-function contains(this, that) = find(this, that) != undef;
+function contains(this, that, ignore_case=false) = find(this, that, ignore_case=ignore_case) != undef;
 
 //function sed(string, regex, replacement) = 
 //function grep(string, regex, index=0)=
@@ -266,10 +270,12 @@ function contains(this, that) = find(this, that) != undef;
 function find(string, goal, index=0, ignore_case=false) = 
 	string == ""?
 		undef
-	: starts_with(string, goal, ignore_case=ignore_case)?
+	: len(goal) == 1 && !ignore_case?
+		search(goal, string, 0)[0][index]
+	: starts_with(string, goal, ignore_case)?
 		index
 	: 
-		find(substring(string, 1), goal, index+1, ignore_case=ignore_case)
+		find(substring(string, 1), goal, index+1, ignore_case)
 	;	
 
 function starts_with(string, start, ignore_case=false) = 
@@ -282,20 +288,6 @@ function ends_with(string, end, ignore_case=false) =
 		end, 
 		ignore_case=ignore_case);
 
-function substring(string, start, length=undef) = 
-	length == undef? 
-		_substring(string, start, len(string)) 
-	: 
-		_substring(string, start, length+start)
-	;
-function _substring(string, start, end) = 
-	start==end ? 
-		"" 
-	: 
-		str(string[start], _substring(string, start+1, end))
-	;
-
-//function replace(string, replaced, replacement, ignore_case=true) = 
 function equals(this, that, ignore_case=false) =
 	ignore_case?
 		lower(this) == lower(that)
@@ -318,3 +310,15 @@ function _transform_case(string, encoded, offset, index=0) =
 		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
 	;
 	
+function substring(string, start, length=undef) = 
+	length == undef? 
+		_substring(string, start, len(string)) 
+	: 
+		_substring(string, start, length+start)
+	;
+function _substring(string, start, end) = 
+	start==end ? 
+		"" 
+	: 
+		str(string[start], _substring(string, start+1, end))
+	;
