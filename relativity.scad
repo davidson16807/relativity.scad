@@ -218,6 +218,11 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 // string functions
+
+
+
+//function _has_tokens(string, tokens, seperator=" ", index=0) = 
+
 function _has_token(string, token, seperator=" ", index=0) = 		
 	token(string, index, seperator) == token ? 		//match?
 		true						//then I guess we found a token				
@@ -255,20 +260,27 @@ function after(string, index=0, seperator=" ") =
 
 function contains(this, that) = find(this, that) != undef;
 
-function find(string, goal, index=0) = 
+//function sed(string, regex, replacement) = 
+//function grep(string, regex, index=0)=
+
+function find(string, goal, index=0, ignore_case=false) = 
 	string == ""?
 		undef
 	: starts_with(string, goal)?
 		index
 	: 
-		find(substring(string, 1), goal, index+1);
-		
+		find(substring(string, 1), goal, index+1, ignore_case=ignore_case)
+	;	
 
-function starts_with(string, start) = 
-	substring(string, 0, len(start)) == start;
+function starts_with(string, start, ignore_case=false) = 
+	equals(	substring(string, 0, len(start)), 
+		start, 
+		ignore_case=ignore_case);
 
-function ends_with(string, end) =
-	substring(string, len(string)-len(end)) == end;
+function ends_with(string, end, ignore_case=false) =
+	equals(	substring(string, len(string)-len(end)), 
+		end, 
+		ignore_case=ignore_case);
 
 function substring(string, start, length=undef) = 
 	length == undef? 
@@ -283,15 +295,26 @@ function _substring(string, start, end) =
 		str(string[start], _substring(string, start+1, end))
 	;
 
-//function equals(this, that, ignore_case=true) =
-//	ignore_case?
-//		this==that
-//	:
-//		undef
-//	;
-//function replace(string, replaced, replacement) = 
-//function lower(string) = 
-//function upper(string) = 
-//function title(string) = 
+//function replace(string, replaced, replacement, ignore_case=true) = 
+function equals(this, that, ignore_case=false) =
+	ignore_case?
+		lower(this) == lower(that)
+	:
+		this==that
+	;
 
-
+//echo(lower("!@#$1234FOOBAR!@#$1234"));
+//echo(upper("!@#$1234foobar!@#$1234"));
+function lower(string) = 
+	_transform_case(string, search(string, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0), 97);
+function upper(string) = 
+	_transform_case(string, search(string, "abcdefghijklmnopqrstuvwxyz",0), 65);
+function _transform_case(string, encoded, offset, index=0) = 
+	index >= len(string)?
+		""
+	: len(encoded[index]) <= 0?
+		str(substring(string, index, 1),	_transform_case(string, encoded, offset, index+1))
+	:
+		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
+	;
+	
