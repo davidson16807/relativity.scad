@@ -219,8 +219,7 @@ function _orient_angles(zaxis)=
 
 // string functions
 //function _has_tokens(string, tokens, seperator=" ", index=0) = 
-
-echo(_has_token("foo bar baz", "baz"));
+//echo(_has_token("foo bar baz", "baz"));
 function _has_token(string, token, seperator=" ", index=0) = 		
 	token(string, seperator, index) == token ? 		//match?
 		true						//then I guess we found a token		
