@@ -191,6 +191,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 	}
 }
 
+//matrix rotation functions
 function _rotate_x_matrix(a)=
 							[[1,0,0,0], 
                       [0,cos(a),-sin(a),0], 
@@ -217,37 +218,80 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 // string functions
-
-//echo(_has_token("screw head hull", ""));
-
 function _has_token(string, token, seperator=" ", index=0) = 		
-	(tokenize(string, index, seperator) == token)? 		//match?
-		true											
-	:(after(string, index, seperator) == "")? 	//no more tokens?
-		false											//guess there aren't any matches, then
-	:
-		_has_token(string, token, seperator, index+1)
+	token(string, index, seperator) == token ? 		//match?
+		true						//then I guess we found a token				
+	: after(string, index, seperator) == "" ? 		//no more tokens?
+		false						//then I guess there aren't any matches
+	:							
+		_has_token(string, token, seperator, index+1)	//otherwise, try again
 	;
 
-function tokenize(string, index=0, char=" ") = 
-	before(after(string, 	index-1, char),
-				0, 	 char);
+function token(string, index=0, seperator=" ") = 
+	before(after(string, 	index-1, seperator),
+				0, 	 seperator);
 
-function before(string, index=0, char=" ") = 
-	(len(search(char, string, 0)[0]) > index && index >= 0 && string != undef)?
-		substring(string, 0, search(char, string, 0)[0][index])
+function before(string, index=0, seperator=" ") = 
+	string == undef?
+		undef
+	: index < 0?
+		""
+	: len(search(seperator, string, 0)[0]) > index?
+		substring(string, 0, search(seperator, string, 0)[0][index])
 	:
 		string
 	;
 
-function after(string, index=0, char=" ") =
-	(len(search(char, string, 0)[0]) > index && index >= 0 && string != undef)?
-		substring(string, search(char, string, 0)[0][index]+1)
+function after(string, index=0, seperator=" ") =
+	string == undef?
+		undef
+	: index < 0?
+		string
+	: len(search(seperator, string, 0)[0]) > index ?
+		substring(string, search(seperator, string, 0)[0][index]+1)
 	:
 		""
 	;
 
-function substring(string, start, length=0) = (length == 0) ? _substring(string, start, len(string)) : _substring(string, start, length+start);
-function _substring(string, start, end) = (start==end) ? "" : str(string[start], _substring(string, start+1, end));
+function contains(this, that) = find(this, that) != undef;
 
-function contains(x, y) = len(search(x, y)) > 0;
+function find(string, goal, index=0) = 
+	string == ""?
+		undef
+	: starts_with(string, goal)?
+		index
+	: 
+		find(substring(string, 1), goal, index+1);
+		
+
+function starts_with(string, start) = 
+	substring(string, 0, len(start)) == start;
+
+function ends_with(string, end) =
+	substring(string, len(string)-len(end)) == end;
+
+function substring(string, start, length=undef) = 
+	length == undef? 
+		_substring(string, start, len(string)) 
+	: 
+		_substring(string, start, length+start)
+	;
+function _substring(string, start, end) = 
+	start==end ? 
+		"" 
+	: 
+		str(string[start], _substring(string, start+1, end))
+	;
+
+//function equals(this, that, ignore_case=true) =
+//	ignore_case?
+//		this==that
+//	:
+//		undef
+//	;
+//function replace(string, replaced, replacement) = 
+//function lower(string) = 
+//function upper(string) = 
+//function title(string) = 
+
+
