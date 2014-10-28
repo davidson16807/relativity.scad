@@ -57,7 +57,7 @@ module mirrored(axes=[0,0,0]){
 }
 
 module hulled(class=""){
-	if(_is_match($class, $show))
+	if(_has_token($class, $show))
 	hull()
 	assign($show=class)
 	children();
@@ -68,7 +68,7 @@ module hulled(class=""){
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
 module differed(positive, negative){
-	if(_is_match($class, $show))
+	if(_has_token($class, $show))
 	difference(){
 		assign($show=positive)
 			children();
@@ -79,7 +79,7 @@ module differed(positive, negative){
 
 // performs the intersection on a list of object classes
 module intersected(class=""){
-	if(_is_match($class, $show))
+	if(_has_token($class, $show))
 	intersection(){
 		assign($show=positive)
 			children();
@@ -133,7 +133,7 @@ module box(size, anchor=$inward) {
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, size)/2)
-			if(_is_match($class, $show)) cube(size, center=true);
+			if(_has_token($class, $show)) cube(size, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -159,7 +159,7 @@ module rod(size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
-			if(_is_match($class, $show))
+			if(_has_token($class, $show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
@@ -185,7 +185,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$inward=center, 
 			$outward=center ){
 		translate(-hammard(anchor, size)/2)
-			if(_is_match($class, $show)) resize(size) sphere(d=size.x, center=true);
+			if(_has_token($class, $show)) resize(size) sphere(d=size.x, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -217,31 +217,37 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 // string functions
-//echo(_is_match("screw head hull", "foo"));
 
-function _is_match(classes, selector, index=0, sep=" ") = 
-	selector == "" ||
-	(index <= len(search(" ", classes,0)[0]))?
-		(split(classes, index, sep) == selector)?
-			true
-			:
-			_is_match(classes, selector, index+1)
-		:
-		false
+//echo(_has_token("screw head hull", ""));
+
+function _has_token(string, token, seperator=" ", index=0) = 		
+	(tokenize(string, index, seperator) == token)? 		//match?
+		true											
+	:(after(string, index, seperator) == "")? 	//no more tokens?
+		false											//guess there aren't any matches, then
+	:
+		_has_token(string, token, seperator, index+1)
 	;
 
-function split(str, index=0, char=" ") = 
-	(index==0) ? 
-		(len(search(char, str)) > 0)?
-			substring(str, 0, search(char, str)[0]) //everything to the next
-			:
-			substring(str, 0) 			//everything after
-		: 
-		(len(search(char, str, 0)) >= index-1)?
-			split(   substring(str, search(" ", str)[0]+1), index-1, char) //recurse
-			:
-			undef					//not found
+function tokenize(string, index=0, char=" ") = 
+	before(after(string, 	index-1, char),
+				0, 	 char);
+
+function before(string, index=0, char=" ") = 
+	(len(search(char, string, 0)[0]) > index && index >= 0 && string != undef)?
+		substring(string, 0, search(char, string, 0)[0][index])
+	:
+		string
 	;
 
-function substring(data, start, length=0) = (length == 0) ? _substring(data, start, len(data)) : _substring(data, start, length+start);
-function _substring(str, start, end) = (start==end) ? "" : str(str[start], _substring(str, start+1, end));
+function after(string, index=0, char=" ") =
+	(len(search(char, string, 0)[0]) > index && index >= 0 && string != undef)?
+		substring(string, search(char, string, 0)[0][index]+1)
+	:
+		""
+	;
+
+function substring(string, start, length=0) = (length == 0) ? _substring(string, start, len(string)) : _substring(string, start, length+start);
+function _substring(string, start, end) = (start==end) ? "" : str(string[start], _substring(string, start+1, end));
+
+function contains(x, y) = len(search(x, y)) > 0;
