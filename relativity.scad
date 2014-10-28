@@ -253,7 +253,7 @@ function after(string, index=0, seperator=" ") =
 	: index < 0?
 		string
 	: len(search(seperator, string, 0)[0]) > index ?
-		substring(string, search(seperator, string, 0)[0][index]+1)
+		substring(string, search(seperator, string, 0)[0][index]+len(seperator))
 	:
 		""
 	;
@@ -266,7 +266,7 @@ function contains(this, that) = find(this, that) != undef;
 function find(string, goal, index=0, ignore_case=false) = 
 	string == ""?
 		undef
-	: starts_with(string, goal)?
+	: starts_with(string, goal, ignore_case=ignore_case)?
 		index
 	: 
 		find(substring(string, 1), goal, index+1, ignore_case=ignore_case)
