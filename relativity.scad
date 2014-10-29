@@ -218,20 +218,54 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 // string functions
-//function _has_tokens(string, tokens, seperator=" ", index=0) = 
+//echo(_has_all_tokens("foo bar baz", "foo baz"));
+//echo(_has_all_tokens("foo bar baz", "spam baz"));
+function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
+	token(tokens, token_seperator, index) == undef?		
+		true						
+	: _has_token(string, token(tokens, token_seperator, index), string_seperator) ?	
+		_has_any_tokens(string, tokens, string_seperator, token_seperator, index+1)		
+	: 
+		false
+	;
+
+//echo(_has_any_tokens("foo bar baz", "spam baz"));
+function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
+	token(tokens, token_seperator, index) == undef?		//no more tokens?
+		false						//then there's no match
+	: _has_token(string, token(tokens, token_seperator, index), string_seperator) ?	//matches
+		true						//then 
+	: 
+		_has_any_tokens(string, tokens, string_seperator, token_seperator, index+1)//otherwise, try the next token
+	;
+
+function _has_any_tokens(string, tokens, seperator=" ", index=0) = 
+	token(tokens, seperator, index) == undef?		//no more tokens?
+		false						//then there's no 
+	: _has_token(string, token(tokens, " ", index), " ") ?	//matches
+		true						//then 
+	: 
+		_has_any_tokens(string, tokens, seperator, index+1)//otherwise, try the next token
+	;
+
 //echo(_has_token("foo bar baz", "baz"));
 function _has_token(string, token, seperator=" ", index=0) = 		
 	token(string, seperator, index) == token ? 		//match?
 		true						//then I guess we found a token		
-	: after(string, seperator, index) == "" ? 		//no more tokens?
+	: after(string, seperator, index) == undef ? 		//no more tokens?
 		false						//then I guess there aren't any matches
 	:							
 		_has_token(string, token, seperator, index+1)	//otherwise, try again
 	;
 
+//echo(token("foo bar baz  ", " ", 0) == "foo");
+//echo(token("foo","", 2));
 function token(string, seperator=" ", index=0, ignore_case = false) = 
-	before(after(string, seperator, index-1, ignore_case), 
-			     seperator, 0, ignore_case);
+	index < 0?
+		undef
+	:
+		before(after(string, 	seperator, index-1, ignore_case), 
+					seperator, 0, ignore_case);
 
 //echo(replace("foobar spam nOOb", "OO", "u", ignore_case=true));
 function replace(string, replaced, replacement, ignore_case=false) = 
@@ -247,17 +281,19 @@ function _replace(string, replaced, replacement, ignore_case=false) =
 		after(string, replaced, ignore_case=ignore_case));
 
 //echo(before("foo bar baz", index=0));
+//echo(before("foo", "", 3));
 function before(string, seperator=" ", index=0, ignore_case=false) = 
 	string == undef?
 		undef
 	: index < 0?
-		""
+		undef
 	: find(string, seperator, index, ignore_case) != undef?
 		substring(string, 0, find(string, seperator, index, ignore_case))
 	:
 		string
 	;
 //echo(after("foo bar baz", index=0));
+echo(after("bar", "",3));
 function after(string, seperator=" ", index=0, ignore_case=false) =
 	string == undef?
 		undef
@@ -266,7 +302,7 @@ function after(string, seperator=" ", index=0, ignore_case=false) =
 	: find(string, seperator, index, ignore_case) != undef ?
 		substring(string, find(string, seperator, index, ignore_case) + len(seperator))
 	:
-		""
+		undef
 	;
 
 function contains(this, that, ignore_case=false) = find(this, that, ignore_case=ignore_case) != undef;
@@ -274,8 +310,11 @@ function contains(this, that, ignore_case=false) = find(this, that, ignore_case=
 //function sed(string, regex, replacement) = 
 //function grep(string, regex, index=0)=
 
+//echo(find("foo", "", 2));
 function find(string, goal, index=0, ignore_case=false) = 
 	string == ""?
+		undef
+	: len(goal) == 0 && index >= len(string)?
 		undef
 	: len(goal) == 1 && !ignore_case?
 		search(goal, string, 0)[0][index]
@@ -283,8 +322,9 @@ function find(string, goal, index=0, ignore_case=false) =
 		index
 	: 
 		find(substring(string, 1), goal, index+1, ignore_case)
-	;	
+	;
 
+//echo(starts_with("", ""));
 function starts_with(string, start, ignore_case=false) = 
 	equals(	substring(string, 0, len(start)), 
 		start, 
