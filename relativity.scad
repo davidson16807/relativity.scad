@@ -218,28 +218,43 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 // string functions
+
+
+// string functions
+function _css_select_all(tag, class, id, selectors, index=0) = 
+	token(selectors, " ", index) == undef?		
+		true
+	: _css_select(string, token(tokens, token_seperator, index)) ?	
+		_css_select_all(tag, class, id, selectors, index+1)
+	: 
+		false
+	;
+	
+function _css_select(tag, class, id, selector, index=0) = 
+	selector == "*"?
+		true
+	: starts_with(selector, "#") ?
+		id == after(selector, "#")
+	: starts_with(selector, ".") ?
+		_has_token(class, after(selector, "."))
+	: starts_with(selector, "*")
+		id == after(selector, "#") || _has_token(class, after(selector, ".")) || tag == selector
+	: 
+		tag == selector
+		
 //echo(_has_all_tokens("foo bar baz", "foo baz"));
 //echo(_has_all_tokens("foo bar baz", "spam baz"));
 function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
 	token(tokens, token_seperator, index) == undef?		
 		true						
 	: _has_token(string, token(tokens, token_seperator, index), string_seperator) ?	
-		_has_any_tokens(string, tokens, string_seperator, token_seperator, index+1)		
+		_has_all_tokens(string, tokens, string_seperator, token_seperator, index+1)		
 	: 
 		false
 	;
 
 //echo(_has_any_tokens("foo bar baz", "spam baz"));
-function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
-	token(tokens, token_seperator, index) == undef?		//no more tokens?
-		false						//then there's no match
-	: _has_token(string, token(tokens, token_seperator, index), string_seperator) ?	//matches
-		true						//then 
-	: 
-		_has_any_tokens(string, tokens, string_seperator, token_seperator, index+1)//otherwise, try the next token
-	;
-
-function _has_any_tokens(string, tokens, seperator=" ", index=0) = 
+function _has_any_tokens(string, tokens, seperator=",", index=0) = 
 	token(tokens, seperator, index) == undef?		//no more tokens?
 		false						//then there's no 
 	: _has_token(string, token(tokens, " ", index), " ") ?	//matches
@@ -293,7 +308,7 @@ function before(string, seperator=" ", index=0, ignore_case=false) =
 		string
 	;
 //echo(after("foo bar baz", index=0));
-echo(after("bar", "",3));
+//echo(after("bar", "",3));
 function after(string, seperator=" ", index=0, ignore_case=false) =
 	string == undef?
 		undef
@@ -305,7 +320,8 @@ function after(string, seperator=" ", index=0, ignore_case=false) =
 		undef
 	;
 
-function contains(this, that, ignore_case=false) = find(this, that, ignore_case=ignore_case) != undef;
+function contains(this, that, ignore_case=false) = 
+	find(this, that, ignore_case=ignore_case) != undef;
 
 //function sed(string, regex, replacement) = 
 //function grep(string, regex, index=0)=
@@ -353,7 +369,7 @@ function _transform_case(string, encoded, offset, index=0) =
 		""
 	: len(encoded[index]) <= 0?
 		str(substring(string, index, 1),	_transform_case(string, encoded, offset, index+1))
-	:
+	: 
 		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
 	;
 	
