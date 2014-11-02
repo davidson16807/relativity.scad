@@ -1,5 +1,14 @@
 include <strings.scad>
 
+function all(booleans, index=0) = 
+	index >= len(booleans)?
+		true
+	: !booleans[index]?
+		false
+	: 
+		all(booleans, index+1)
+	
+
 *echo([	"token:",
 	token(" ", 0) == undef,
 	token(test, -1) == undef,
@@ -70,6 +79,14 @@ echo(["equals:",
 	
 echo(["lower:", lower("!@#$1234FOOBAR!@#$1234") == "!@#$1234foobar!@#$1234"]);
 echo(["upper:", upper("!@#$1234foobar!@#$1234") == "!@#$1234FOOBAR!@#$1234"]);
+
+echo([	"join:",
+	join(["foo", "bar", "baz"], ", ") == "foo, bar, baz",
+	join(["foo", "bar", "baz"], "") == "foobarbaz",
+	join(["foo"], ",") == "foo",
+	join([], "") == "",
+	
+]);
 
 echo([	"substring:",
 	substring("foobar", 2, 2) == "ob",

@@ -160,7 +160,7 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 		between(string, _ensure_defined(find(string, seperator, index-1)+len(seperator), len(string)+1), 
 				_ensure_defined(find(string, seperator, index), 		 len(string)+1)) 
 	;
-				
+	
 function contains(string, substring, index=0, ignore_case=false) = 
 	find(string, substring, ignore_case=ignore_case) != undef; 
 
@@ -220,6 +220,17 @@ function _transform_case(string, encoded, offset, index=0) =
 	: 
 		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
 	;
+
+function join(strings, delimeter) = 
+	strings == undef?
+		undef
+	: strings == []?
+		""
+	: _join(strings, len(strings)-1, delimeter, 0);
+function _join(strings, index, delimeter) = 
+	index==0 ? 
+		strings[index] 
+	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
 	
 
 function substring(string, start, length=undef) = 
@@ -291,4 +302,17 @@ function _ensure_defined(string, replacement) =
 		replacement
 	:
 		string
-	;
+	;
+	
+
+function parse_int(string, base=10, i=0, nb=0) = 
+	string[0] == "-" ? 
+		-1*_parse_int(string, base, 1) 
+	: 
+		_strToInt(str, base);
+function _parse_int(string, base, i=0, nb=0) = 
+	i == len(string) ? 
+		nb 
+	: 
+		nb + _parse_int(string, base, i+1, 
+				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
