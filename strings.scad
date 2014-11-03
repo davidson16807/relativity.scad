@@ -96,7 +96,7 @@ function token(string, index, pos=0) =
 
 	;
 
-	
+
 
 
 
@@ -122,7 +122,7 @@ function _token_start(string, index=0, ignore_space=true) =
 
 	
 
-function _token_end(string, index=0, ignore_space=true) = 
+function _token_end(string, index=0, ignore_space=true, tokenize_quotes=true) = 
 
 	index >= len(string)?
 
@@ -144,15 +144,10 @@ function _token_end(string, index=0, ignore_space=true) =
 
 	)
 	
-	: string[index] == "\"" ?
-		find(string, "\"", pos=index) + 1
-	: string[index] == "'" ?
-		find(string, "'", pos=index) + 1
-
-	: _is_set(string, "\\", index) ? //multicharacter symbol
-
-		_match_set(string, _symbol, index)
-
+	: string[index] == "\"" && tokenize_quotes ?
+		_match_quote(string, "\"", index+1)
+	: string[index] == "'" && tokenize_quotes?
+		_match_quote(string, "'", index+1)
 	: 
 
 		index+1
@@ -281,7 +276,16 @@ function _match_set_reverse(string, set, index) =
 
 	;
 
-
+function _match_quote(string, quote_char, index) = 
+	index >= len(string)?
+		len(string)
+	: string[index] == quote_char?
+		index
+	: string[index] == "\\"? 
+		_match_quote(string, quote_char, index+2)
+	: 
+		_match_quote(string, quote_char, index+1)
+	;
 
 //function _match_range(string, minimum, maximum, index) = 
 
@@ -638,5 +642,4 @@ function _parse_int(string, base, i=0, nb=0) =
 		nb + _parse_int(string, base, i+1, 
 
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
-				
 				
