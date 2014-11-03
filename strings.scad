@@ -81,7 +81,6 @@ function _has_token(string, token, seperator=" ", index=0) =
 test = "foo  (1, bar2)";
 
 
-
 function token(string, index, pos=0) = 
 
 	index == 0?
@@ -154,7 +153,14 @@ function _token_end(string, index=0, ignore_space=true, tokenize_quotes=true) =
 
 	;
 
+function is_empty(string) = 
+	string == "";
+
+function is_null_or_empty(string) = 
+	string == undef || string == "";
 	
+function is_null_or_whitespace(string) = 
+	string == undef || trim(string) == "";
 
 function trim(string) = 
 
@@ -643,3 +649,4 @@ function _parse_int(string, base, i=0, nb=0) =
 
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
 				
+			
