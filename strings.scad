@@ -53,47 +53,84 @@ function _has_token(string, token, seperator=" ", index=0) =
 test = "foo  (1, bar2)";
 
 echo([
-	_match_infix_regex("foo", "f", 0, 0) == 1,
-	_match_infix_regex("foo", "&fo", 0, 0) == 2,
-	_match_infix_regex("foo", "&fx", 0, 0) == undef,
-	_match_infix_regex("foo", "&xf", 0, 0) == undef,
-	_match_infix_regex("foo", "&xy", 0, 0) == undef,
-	_match_infix_regex("foo", "|fx", 0, 0) == 1,
-	_match_infix_regex("foo", "|xf", 0, 0) == 1,
-	_match_infix_regex("foo", "|xy", 0, 0) == undef,
-	_match_infix("++1+1++11+111", "+", 0) == 13,
+	_match_prefix_regex("foo", "f", 0, 0) == 1,
+	_match_prefix_regex("foo", "&fo", 0, 0) == 2,
+	_match_prefix_regex("foo", "&fx", 0, 0) == undef,
+	_match_prefix_regex("foo", "&xf", 0, 0) == undef,
+	_match_prefix_regex("foo", "&xy", 0, 0) == undef,
+	_match_prefix_regex("foo", "|fx", 0, 0) == 1,
+	_match_prefix_regex("foo", "|xf", 0, 0) == 1,
+	_match_prefix_regex("foo", "|xy", 0, 0) == undef,
+	_match_prefix_regex("foo", "?x", 0, 0) == 0,
+	_match_prefix_regex("foo", "?f", 0, 0) == 1,
+	_match_prefix_regex("f", "*o", 0, 0) == 0,
+	_match_prefix_regex("of", "*o", 0, 0) == 1,
+	_match_prefix_regex("oof", "*o", 0, 0) == 2,
+	_match_prefix_regex("oof", "&*of", 0, 0) == 3,
+	_match_prefix_regex("f", "+o", 0, 0) == undef,
+	_match_prefix_regex("of", "+o", 0, 0) == 1,
+	_match_prefix_regex("oof", "+o", 0, 0) == 2,
+	_match_prefix_regex("oof", "&+of", 0, 0) == 3,
+	_match_prefix_regex("oooofaa", "&*of", 0, 0) == 5,
+	_match_prefix_regex("foo", ".", 0, 0) == 1,
+	_match_prefix_regex("f", "+.", 0, 0),
+	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
 ]);
 
-function _match_infix_regex(string, regex, string_pos, regex_pos)=
+function _match_prefix_regex(string, regex, string_pos, regex_pos)=
 	string == undef?
 		undef
+	: regex == undef?
+		undef
+	: string_pos == undef?
+		undef
+	: regex_pos == undef?
+		undef
+	: string_pos >= len(string)?
+		undef
+	: regex_pos >= len(regex)?
+		undef
 	: regex[regex_pos] == "|"?
-		_ensure_defined(_match_infix_regex(string, regex, string_pos, regex_pos+1),		
-				_match_infix_regex(string, regex, string_pos, _match_infix(regex, "|*+?&", regex_pos+1)))
+		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),		
+				_match_prefix_regex(string, regex, string_pos, 
+					_match_prefix(regex, "*+?", "|&", regex_pos+1)))
 	: regex[regex_pos] == "*"?
-		undef
+		_ensure_defined(
+			_match_prefix_regex(string, regex,
+				_match_prefix_regex(string, regex, string_pos, regex_pos+1),
+				regex_pos),
+			string_pos)
 	: regex[regex_pos] == "+"?
-		undef
+		_ensure_defined(
+			_match_prefix_regex(string, regex,
+				_match_prefix_regex(string, regex, string_pos, regex_pos+1),
+				regex_pos),
+			_match_prefix_regex(string, regex, string_pos, regex_pos+1))
 	: regex[regex_pos] == "?"?
-		undef
+		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
+				string_pos)
 	: regex[regex_pos] == "&"?	//explicit concatenation
-		_match_infix_regex(string, regex, _match_infix_regex(string, regex, string_pos, regex_pos+1), _match_infix(regex, "|*+?&", regex_pos+1))
+		_match_prefix_regex(string, regex, 
+			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
+			_match_prefix(regex, "*+?", "|&", regex_pos+1))
 	: string[string_pos] == regex[regex_pos] ? //literal
+		string_pos+1
+	: regex[regex_pos] == "."?
 		string_pos+1
 	: 
 		undef
 	;
 	
-function _match_infix(regex, operators, index=0) = 
+function _match_prefix(regex, unary, binary, index=0) = 
 	index >= len(regex)?
 		len(regex)
-	: !_is_set(regex, operators, index)?
-		index+1
+	: _is_set(regex, unary, index)?
+		_match_prefix(regex, unary, binary, index+1)
+	: _is_set(regex, binary, index)?
+		_match_prefix(regex, unary, binary,  _match_prefix(regex, unary, binary, index+1))
 	: 
-		_match_infix(regex, operators, _match_infix(regex, operators, index+1))
+		index+1
 	;
-		
-	
 
 function token(string, index, pos=0) = 
 	index == 0?
@@ -461,4 +498,3 @@ function _parse_int(string, base, i=0, nb=0) =
 	: 
 		nb + _parse_int(string, base, i+1, 
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
-
