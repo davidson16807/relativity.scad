@@ -73,20 +73,33 @@ echo([
 	_match_prefix_regex("f", "+.", 0, 0)==1,
 	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
 	_infix_to_prefix("D+E^5", "^*/+-", index=4),
-	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", index=12)
+	_infix_to_prefix("(D+E)^5", "^*/+-", index=6),
+	_infix_to_prefix("(A+B^C)*D+E", "^*/+-", index=10),
+	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", index=12),
 ]);
+
 
 //converts infix to prefix using shunting yard algorithm
 function _infix_to_prefix(infix, operators, stack="", index=0) = 
 	index < 0?
 		stack
-	: _is_set(infix, operators, index)?
-		str(_infix_to_prefix(infix, operators, stack=str(infix[index]), index=index-1), stack)
+	: _is_set(infix, operators, index)?(
+		stack[0] == ")" || len(stack) <= 0 ?
+			str(_infix_to_prefix(infix, operators, stack=str(infix[index], stack), 	index=index-1))
+		:
+			str(_infix_to_prefix(infix, operators, stack=after(stack, 0), 			index=index), stack[0])
+		)
 	: infix[index] == ")"?
-		undef
-		//_infix_to_prefix(infix, operators, stack=str(stack, infix[index]), index=index-1)
+			str(_infix_to_prefix(infix, operators, stack=str(infix[index], stack), 	index=index-1))
+	: infix[index] == "("?
+		stack[0] == ")" ?
+			str(_infix_to_prefix(infix, operators, stack=after(stack, 0),			index=index-1))
+		: len(stack) <= 0 ?
+			str(_infix_to_prefix(infix, operators, stack=stack,				index=index-1))
+		: 
+			str(_infix_to_prefix(infix, operators, stack=after(stack, 0),		 	index=index), stack[0])
 	:
-		str(_infix_to_prefix(infix, operators, stack=stack, index=index-1), infix[index])
+			str(_infix_to_prefix(infix, operators, stack=stack, 				index=index-1), infix[index])
 	;
 
 function _match_prefix_regex(string, regex, string_pos, regex_pos)=
