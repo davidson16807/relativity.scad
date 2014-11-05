@@ -4,10 +4,6 @@ _uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 _letter = str(_lowercase, _uppercase);
 _alphanumeric = str(_letter, _digit);
 _whitespace = " \t\r\n";
-_symbol = str("^", _alphanumeric, _whitespace);
-// string functions
-
-
 
 //echo(_has_all_tokens("foo bar baz", "foo baz"));
 
@@ -75,9 +71,23 @@ echo([
 	_match_prefix_regex("foo", ".", 0, 0) == 1,
 	_match_prefix_regex("f", "+.", 0, 0),
 	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
+	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", index=12)
 ]);
 
+//converts infix to prefix using shunting yard algorithm
+function _infix_to_prefix(infix, operators, stack="", index=0) = 
+	index <= 0?
+		""
+	: _is_set(infix, operators, index)?
+		_infix_to_prefix(infix, operators, stack=infix[index], index=index-1)
+	: infix[index] == ")"?
+		_infix_to_prefix(infix, operators, stack=")", index=index-1)
+	:
+		infix[index]
+	;
+
 function _match_prefix_regex(string, regex, string_pos, regex_pos)=
+	//INVALID INPUT
 	string == undef?
 		undef
 	: regex == undef?
@@ -90,33 +100,49 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos)=
 		undef
 	: regex_pos >= len(regex)?
 		undef
-	: regex[regex_pos] == "|"?
-		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),		
+
+	//UNION
+	: regex[regex_pos] == "|" ?
+		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				_match_prefix_regex(string, regex, string_pos, 
 					_match_prefix(regex, "*+?", "|&", regex_pos+1)))
-	: regex[regex_pos] == "*"?
+
+	//KLEENE STAR
+	: regex[regex_pos] == "*" ?
 		_ensure_defined(
 			_match_prefix_regex(string, regex,
 				_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				regex_pos),
 			string_pos)
-	: regex[regex_pos] == "+"?
+
+	//KLEENE PLUS
+	: regex[regex_pos] == "+" ?
 		_ensure_defined(
 			_match_prefix_regex(string, regex,
 				_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				regex_pos),
 			_match_prefix_regex(string, regex, string_pos, regex_pos+1))
-	: regex[regex_pos] == "?"?
+
+	//OPTION
+	: regex[regex_pos] == "?" ?
 		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				string_pos)
-	: regex[regex_pos] == "&"?	//explicit concatenation
+
+	//CONCATENATION
+	: regex[regex_pos] == "&" ?	
 		_match_prefix_regex(string, regex, 
 			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
 			_match_prefix(regex, "*+?", "|&", regex_pos+1))
-	: string[string_pos] == regex[regex_pos] ? //literal
+
+	//LITERAL
+	: string[string_pos] == regex[regex_pos] ?
 		string_pos+1
+
+	//WILDCARD
 	: regex[regex_pos] == "."?
 		string_pos+1
+
+	//NO MATCH
 	: 
 		undef
 	;
@@ -197,54 +223,6 @@ function trim(string) =
 			""
 		)
 	;
-	
-
-//function _match_kleene_plus(string, element, index, ignore_case) = 
-	
-
-//function _match_kleene_star(string, element, index, ignore_case) = 
-
-
-
-//function _match_optional(string, element, index, ignore_case) = 
-
-
-
-//function _match_token(string, element, index) = 
-
-//	element == "." ?
-
-//		index + 1
-
-//	: element == "$" ?
-
-//		_match_terminal(string, index)
-
-//	: 
-
-//		_match_regex(string, element, index)
-
-
-
-function _match_terminal(string, index) = 
-	len(string) >= index ?
-		index + 1
-	:
-		index
-	;
-
-
-
-function _match_wildcard(string, index) = 
-	index == len(string)?
-		len(string)
-	: starts_with(string, literal, index, ignore_case) ?
-		index+1
-	:
-		index
-	;
-
-
 
 //echo(_match_set(test, _symbol, 13));
 
@@ -286,7 +264,7 @@ function _match_quote(string, quote_char, index) =
 //echo(_is_set(test, _symbol, 6));
 
 function _is_set(string, set, index=0) = 
-	(len(search(set, "^", 0)[0]) > 0) != (len(search(string, set, 0)[index]) > 0);
+	len(search(string[index],set)) > 0;
 
 
 
