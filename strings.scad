@@ -72,36 +72,51 @@ echo([
 	_match_prefix_regex("foo", ".", 0, 0) == 1,
 	_match_prefix_regex("f", "+.", 0, 0)==1,
 	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
-	_infix_to_prefix("D+E^5", "^*/+-", index=4),
-	_infix_to_prefix("(D+E)^5", "^*/+-", index=6),
-	_infix_to_prefix("(A+B^C)*D+E", "^*/+-", index=10),
-	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", index=12),
+	_infix_to_prefix("D+E^5", "^*/+-", i=4) == "+D^E5",
+	_infix_to_prefix("(D+E)^5", "^*/+-", i=6) == "^+DE5",
+	_infix_to_prefix("(A+B^C)*D+E", "^*/+-", i=10) == "+*+A^BCDE",
+	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", i=12) == "+*+A^BCD^E5",
+	_infix_to_prefix("A+B^C", "^+", i=4) == "+A^BC",
+	_infix_to_prefix("A+B^C", "+^", i=4) == "^+ABC",
+	reverse("foo") == "oof",
 ]);
 
 
 //converts infix to prefix using shunting yard algorithm
-function _infix_to_prefix(infix, operators, stack="", index=0) = 
-	index < 0?
-		stack
-	: _is_set(infix, operators, index)?(
-		stack[0] == ")" || len(stack) <= 0 ?
-			str(_infix_to_prefix(infix, operators, stack=str(infix[index], stack), 	index=index-1))
+function _infix_to_prefix(infix, ops, stack="", i=0) = 
+	i < 0?
+		reverse(stack)
+	: _is_set(infix, ops, i)?
+		stack[0] == ")" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
+			str(_infix_to_prefix(infix, ops, stack=str(infix[i], stack), 	i=i-1))
 		:
-			str(_infix_to_prefix(infix, operators, stack=after(stack, 0), 			index=index), stack[0])
-		)
-	: infix[index] == ")"?
-			str(_infix_to_prefix(infix, operators, stack=str(infix[index], stack), 	index=index-1))
-	: infix[index] == "("?
+			str(_infix_to_prefix(infix, ops, stack=after(stack, 0), 			i=i), stack[0])
+	: infix[i] == ")"?
+			str(_infix_to_prefix(infix, ops, stack=str(infix[i], stack), 	i=i-1))
+	: infix[i] == "("?
 		stack[0] == ")" ?
-			str(_infix_to_prefix(infix, operators, stack=after(stack, 0),			index=index-1))
+			str(_infix_to_prefix(infix, ops, stack=after(stack, 0),			i=i-1))
 		: len(stack) <= 0 ?
-			str(_infix_to_prefix(infix, operators, stack=stack,				index=index-1))
+			str(_infix_to_prefix(infix, ops, stack=stack,				i=i-1))
 		: 
-			str(_infix_to_prefix(infix, operators, stack=after(stack, 0),		 	index=index), stack[0])
+			str(_infix_to_prefix(infix, ops, stack=after(stack, 0),		 	i=i), stack[0])
 	:
-			str(_infix_to_prefix(infix, operators, stack=stack, 				index=index-1), infix[index])
+			str(_infix_to_prefix(infix, ops, stack=stack, 				i=i-1), infix[i])
 	;
 
+function _precedence(op, ops) = 
+	search(op, ops)[0];
+	
+function reverse(string, i=0) = 
+	string == undef?
+		undef
+	: len(string) <= 0?
+		""
+	: i <= len(string)-1?
+		str(reverse(string, i+1), string[i])
+	:
+		"";
+	
 function _match_prefix_regex(string, regex, string_pos, regex_pos)=
 	//INVALID INPUT
 	string == undef?
