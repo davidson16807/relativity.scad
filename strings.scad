@@ -4,11 +4,8 @@ _uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 _letter = str(_lowercase, _uppercase);
 _alphanumeric = str(_letter, _digit);
 _whitespace = " \t\r\n";
+_nonsymbol = str(_alphanumeric, _whitespace);
 // string functions
-
-//echo(_has_all_tokens("foo bar baz", "foo baz"));
-
-//echo(_has_all_tokens("foo bar baz", "spam baz"));
 
 function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
 	split(tokens, token_seperator, index) == undef?		
@@ -19,10 +16,6 @@ function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator="
 		false
 	;
 
-
-
-//echo(_has_any_tokens("foo bar baz", "spam baz"));
-
 function _has_any_tokens(string, tokens, seperator=",", index=0) = 
 	split(tokens, seperator, index) == undef?		//no more tokens?
 		false						//then there's no 
@@ -31,10 +24,6 @@ function _has_any_tokens(string, tokens, seperator=",", index=0) =
 	: 
 		_has_any_tokens(string, tokens, seperator, index+1)//otherwise, try the next token
 	;
-
-
-
-//echo(_has_token("foo bar baz", "baz"));
 
 function _has_token(string, token, seperator=" ", index=0) = 		
 	split(string, seperator, index) == token ? 		//match?
@@ -51,10 +40,10 @@ test = "foo  (1, bar2)";
 
 echo([
 	_match_prefix_regex("foo", "f", 0, 0) == 1,
-	_match_prefix_regex("foo", "&fo", 0, 0) == 2,
-	_match_prefix_regex("foo", "&fx", 0, 0) == undef,
-	_match_prefix_regex("foo", "&xf", 0, 0) == undef,
-	_match_prefix_regex("foo", "&xy", 0, 0) == undef,
+	_match_prefix_regex("foo", "·fo", 0, 0) == 2,
+	_match_prefix_regex("foo", "·fx", 0, 0) == undef,
+	_match_prefix_regex("foo", "·xf", 0, 0) == undef,
+	_match_prefix_regex("foo", "·xy", 0, 0) == undef,
 	_match_prefix_regex("foo", "|fx", 0, 0) == 1,
 	_match_prefix_regex("foo", "|xf", 0, 0) == 1,
 	_match_prefix_regex("foo", "|xy", 0, 0) == undef,
@@ -63,28 +52,59 @@ echo([
 	_match_prefix_regex("f", "*o", 0, 0) == 0,
 	_match_prefix_regex("of", "*o", 0, 0) == 1,
 	_match_prefix_regex("oof", "*o", 0, 0) == 2,
-	_match_prefix_regex("oof", "&*of", 0, 0) == 3,
+	_match_prefix_regex("oof", "·*of", 0, 0) == 3,
 	_match_prefix_regex("f", "+o", 0, 0) == undef,
 	_match_prefix_regex("of", "+o", 0, 0) == 1,
 	_match_prefix_regex("oof", "+o", 0, 0) == 2,
-	_match_prefix_regex("oof", "&+of", 0, 0) == 3,
-	_match_prefix_regex("oooofaa", "&*of", 0, 0) == 5,
+	_match_prefix_regex("oof", "·+of", 0, 0) == 3,
+	_match_prefix_regex("oooofaa", "·*of", 0, 0) == 5,
 	_match_prefix_regex("foo", ".", 0, 0) == 1,
 	_match_prefix_regex("f", "+.", 0, 0)==1,
 	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
+	reverse("foo") == "oof",
 	_infix_to_prefix("D+E^5", "^*/+-", i=4) == "+D^E5",
 	_infix_to_prefix("(D+E)^5", "^*/+-", i=6) == "^+DE5",
 	_infix_to_prefix("(A+B^C)*D+E", "^*/+-", i=10) == "+*+A^BCDE",
 	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", i=12) == "+*+A^BCD^E5",
 	_infix_to_prefix("A+B^C", "^+", i=4) == "+A^BC",
 	_infix_to_prefix("A+B^C", "+^", i=4) == "^+ABC",
-	reverse("foo") == "oof",
+	_explicitize_concatenation("(fo+(bar)?baz)+", 0) == "(f·o+·(b·a·r)?·b·a·z)+",
+	_infix_to_prefix("(f·o+·(b·a·r)?·b·a·z)+", "?*+·|", i=21) == "+·f·+o·?·b·ar·b·az",
+	_compile_regex("(fo+(bar)?baz)+") == "+·f·+o·?·b·ar·b·az",
+	_match_prefix_regex("foooobazfoobarbaz", "+·f·+o·?·b·ar·b·az", 0, 0) == 17,
+	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
 ]);
 
+function show_regex(string, pattern) = undef;			//string	anywhere
+function replace_regex(string, pattern) = undef;		//string	anywhere
+function split_regex(string, pattern) = undef;			//string	anywhere
+function contains_regex(string, pattern) = undef;		//bool		anywhere
+function find_regex(string, pattern) = undef;			//[start,end]	anywhere
+function match_regex(string, pattern) = 			//end pos	start
+	_match_prefix_regex(string,
+		_compile_regex(pattern), 0);
+
+function _compile_regex(regex) = 
+	_infix_to_prefix(
+		_explicitize_concatenation(regex), 
+		"?*+·|");
+
+function _explicitize_concatenation(regex, i=0) = 
+	i >= len(regex)?
+		""
+	: i+1 >= len(regex)?
+		regex[i]
+	: !_is_set(regex, "|()", i) && !_is_set(regex, "*+?|)", i+1)?
+		str(regex[i], "·", _explicitize_concatenation(regex, i+1))
+	: 
+		str(regex[i], _explicitize_concatenation(regex, i+1))
+	;
 
 //converts infix to prefix using shunting yard algorithm
-function _infix_to_prefix(infix, ops, stack="", i=0) = 
-	i < 0?
+function _infix_to_prefix(infix, ops, stack="", i=undef) = 
+	i == undef?
+		_infix_to_prefix(infix, ops, stack, i=len(infix)-1)
+	: i < 0?
 		reverse(stack)
 	: _is_set(infix, ops, i)?
 		stack[0] == ")" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
@@ -117,7 +137,7 @@ function reverse(string, i=0) =
 	:
 		"";
 	
-function _match_prefix_regex(string, regex, string_pos, regex_pos)=
+function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 	//INVALID INPUT
 	string == undef?
 		undef
@@ -136,7 +156,7 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos)=
 	: regex[regex_pos] == "|" ?
 		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				_match_prefix_regex(string, regex, string_pos, 
-					_match_prefix(regex, "*+?", "|&", regex_pos+1)))
+					_match_prefix(regex, "*+?", "|·", regex_pos+1)))
 
 	//KLEENE STAR
 	: regex[regex_pos] == "*" ?
@@ -160,10 +180,10 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos)=
 				string_pos)
 
 	//CONCATENATION
-	: regex[regex_pos] == "&" ?	
+	: regex[regex_pos] == "·" ?	
 		_match_prefix_regex(string, regex, 
 			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
-			_match_prefix(regex, "*+?", "|&", regex_pos+1))
+			_match_prefix(regex, "*+?", "|·", regex_pos+1))
 
 	//LITERAL
 	: string[string_pos] == regex[regex_pos] ?
