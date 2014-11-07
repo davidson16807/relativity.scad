@@ -75,14 +75,35 @@ echo([
 	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
 ]);
 
-function show_regex(string, pattern) = undef;			//string	anywhere
-function replace_regex(string, pattern) = undef;		//string	anywhere
-function split_regex(string, pattern) = undef;			//string	anywhere
-function contains_regex(string, pattern) = undef;		//bool		anywhere
-function find_regex(string, pattern) = undef;			//[start,end]	anywhere
-function match_regex(string, pattern) = 			//end pos	start
+function show_regex(string, pattern, index=0, pos=0) = 		//string
+	index == 0?
+		_fallback_on([pos, match_regex(string, pattern, pos)], 
+			[pos, undef], 
+			undef)
+	:
+		find_regex(string, pattern, 
+			index = index-1,
+			pos = match_regex(string, pattern, pos) + 1)
+	;
+function replace_regex(string, pattern, replacement) = undef;	//string	
+function split_regex(string, pattern) = undef;			//string	
+function contains_regex(string, pattern) = undef;			//bool		
+	//find_regex(string, pattern) != undef
+function find_regex(string, pattern, index=0, pos=0) = 		//[start,end]
+	index == 0?
+		_fallback_on([pos, match_regex(string, pattern, pos)], 
+			[pos, undef], 
+			undef)
+	:
+		find_regex(string, pattern, 
+			index = index-1,
+			pos = match_regex(string, pattern, pos) + 1)
+	;
+		
+
+function match_regex(string, pattern, pos=0) = 		//end pos
 	_match_prefix_regex(string,
-		_compile_regex(pattern), 0);
+		_compile_regex(pattern), pos, 0);
 
 function _compile_regex(regex) = 
 	_infix_to_prefix(
@@ -126,16 +147,6 @@ function _infix_to_prefix(infix, ops, stack="", i=undef) =
 
 function _precedence(op, ops) = 
 	search(op, ops)[0];
-	
-function reverse(string, i=0) = 
-	string == undef?
-		undef
-	: len(string) <= 0?
-		""
-	: i <= len(string)-1?
-		str(reverse(string, i+1), string[i])
-	:
-		"";
 	
 function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 	//INVALID INPUT
@@ -428,8 +439,15 @@ function _join(strings, index, delimeter) =
 		strings[index] 
 	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
 	
-
-
+function reverse(string, i=0) = 
+	string == undef?
+		undef
+	: len(string) <= 0?
+		""
+	: i <= len(string)-1?
+		str(reverse(string, i+1), string[i])
+	:
+		"";
 
 function substring(string, start, length=undef) = 
 	length == undef? 
@@ -511,6 +529,12 @@ function _ensure_defined(string, replacement) =
 	:
 		string
 	;
+function _fallback_on(value, error, fallback) = 
+	value == error_case?
+		fallback
+	: 
+		value
+	;
 	
 
 
@@ -527,3 +551,4 @@ function _parse_int(string, base, i=0, nb=0) =
 	: 
 		nb + _parse_int(string, base, i+1, 
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
+	
