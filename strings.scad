@@ -39,67 +39,57 @@ function _has_token(string, token, seperator=" ", index=0) =
 test = "foo  (1, bar2)";
 
 echo([
-	_match_prefix_regex("foo", "f", 0, 0) == 1,
-	_match_prefix_regex("foo", "·fo", 0, 0) == 2,
-	_match_prefix_regex("foo", "·fx", 0, 0) == undef,
-	_match_prefix_regex("foo", "·xf", 0, 0) == undef,
-	_match_prefix_regex("foo", "·xy", 0, 0) == undef,
-	_match_prefix_regex("foo", "|fx", 0, 0) == 1,
-	_match_prefix_regex("foo", "|xf", 0, 0) == 1,
-	_match_prefix_regex("foo", "|xy", 0, 0) == undef,
-	_match_prefix_regex("foo", "?x", 0, 0) == 0,
-	_match_prefix_regex("foo", "?f", 0, 0) == 1,
-	_match_prefix_regex("f", "*o", 0, 0) == 0,
-	_match_prefix_regex("of", "*o", 0, 0) == 1,
-	_match_prefix_regex("oof", "*o", 0, 0) == 2,
-	_match_prefix_regex("oof", "·*of", 0, 0) == 3,
-	_match_prefix_regex("f", "+o", 0, 0) == undef,
-	_match_prefix_regex("of", "+o", 0, 0) == 1,
-	_match_prefix_regex("oof", "+o", 0, 0) == 2,
-	_match_prefix_regex("oof", "·+of", 0, 0) == 3,
-	_match_prefix_regex("oooofaa", "·*of", 0, 0) == 5,
-	_match_prefix_regex("foo", ".", 0, 0) == 1,
-	_match_prefix_regex("f", "+.", 0, 0)==1,
-	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
-	reverse("foo") == "oof",
-	_infix_to_prefix("D+E^5", "^*/+-", i=4) == "+D^E5",
-	_infix_to_prefix("(D+E)^5", "^*/+-", i=6) == "^+DE5",
-	_infix_to_prefix("(A+B^C)*D+E", "^*/+-", i=10) == "+*+A^BCDE",
-	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", i=12) == "+*+A^BCD^E5",
-	_infix_to_prefix("A+B^C", "^+", i=4) == "+A^BC",
-	_infix_to_prefix("A+B^C", "+^", i=4) == "^+ABC",
 	_explicitize_concatenation("(fo+(bar)?baz)+", 0) == "(f·o+·(b·a·r)?·b·a·z)+",
 	_infix_to_prefix("(f·o+·(b·a·r)?·b·a·z)+", "?*+·|", i=21) == "+·f·+o·?·b·ar·b·az",
 	_compile_regex("(fo+(bar)?baz)+") == "+·f·+o·?·b·ar·b·az",
 	_match_prefix_regex("foooobazfoobarbaz", "+·f·+o·?·b·ar·b·az", 0, 0) == 17,
 	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
+	find_regex(test, " +", 0),
+	find_regex(test, " +", 1),
+	find_regex(test, " +", 2),
+	_between_vector(test, [0,5]),
+	show_regex(test, "o+", 0),
+	split_regex(test, " +", 0),
 ]);
 
-function show_regex(string, pattern, index=0, pos=0) = 		//string
-	index == 0?
-		_fallback_on([pos, match_regex(string, pattern, pos)], 
-			[pos, undef], 
-			undef)
-	:
-		find_regex(string, pattern, 
-			index = index-1,
-			pos = match_regex(string, pattern, pos) + 1)
+
+
+function show_regex(string, pattern, index=0) = 		//string
+	_between_vector(string, find_regex(string, pattern, index));
+	
+function _between_vector(string, vector) = 
+	vector == undef?
+		undef
+	: 
+		between(string, vector.x, vector.y)
 	;
-function replace_regex(string, pattern, replacement) = undef;	//string	
-function split_regex(string, pattern) = undef;			//string	
-function contains_regex(string, pattern) = undef;			//bool		
-	//find_regex(string, pattern) != undef
+	
+//function replace_regex(string, pattern, replacement) = undef;	//string	
+function split_regex(string, pattern, index) =			//string	
+	index <= 0?
+		before(string, 0, find_regex(string, pattern, index).x)
+	:
+		between(string, 
+			find_regex(string, pattern, index).y, 
+			find_regex(string, pattern, index+1).x);
+			
+function contains_regex(string, pattern) = 			//bool		
+	find_regex(string, pattern) != undef;
+	
 function find_regex(string, pattern, index=0, pos=0) = 		//[start,end]
 	index == 0?
-		_fallback_on([pos, match_regex(string, pattern, pos)], 
-			[pos, undef], 
-			undef)
+		_find_regex(string, pattern, pos)
 	:
 		find_regex(string, pattern, 
 			index = index-1,
-			pos = match_regex(string, pattern, pos) + 1)
+			pos = _find_regex(string, pattern, pos).y + 1)
 	;
-		
+function _find_regex(string, pattern, pos=0) =
+	pos >= len(string)?
+		undef
+	: _fallback_on([pos, match_regex(string, pattern, pos)], 
+		[pos, undef],
+		_find_regex(string, pattern, pos+1));
 
 function match_regex(string, pattern, pos=0) = 		//end pos
 	_match_prefix_regex(string,
@@ -530,7 +520,7 @@ function _ensure_defined(string, replacement) =
 		string
 	;
 function _fallback_on(value, error, fallback) = 
-	value == error_case?
+	value == error?
 		fallback
 	: 
 		value
