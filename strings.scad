@@ -37,13 +37,9 @@ function _has_token(string, token, seperator=" ", index=0) =
 
 
 test = "foo  (1, bar2)";
+regex_test = "foooobazfoobarbaz";
 
 echo([
-	_explicitize_concatenation("(fo+(bar)?baz)+", 0) == "(f·o+·(b·a·r)?·b·a·z)+",
-	_infix_to_prefix("(f·o+·(b·a·r)?·b·a·z)+", "?*+·|", i=21) == "+·f·+o·?·b·ar·b·az",
-	_compile_regex("(fo+(bar)?baz)+") == "+·f·+o·?·b·ar·b·az",
-	_match_prefix_regex("foooobazfoobarbaz", "+·f·+o·?·b·ar·b·az", 0, 0) == 17,
-	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
 	find_regex(test, " +", 0),
 	find_regex(test, " +", 1),
 	find_regex(test, " +", 2),
@@ -98,7 +94,7 @@ function match_regex(string, pattern, pos=0) = 		//end pos
 function _compile_regex(regex) = 
 	_infix_to_prefix(
 		_explicitize_concatenation(regex), 
-		"?*+·|");
+		"?*+&|");
 
 function _explicitize_concatenation(regex, i=0) = 
 	i >= len(regex)?
@@ -106,7 +102,7 @@ function _explicitize_concatenation(regex, i=0) =
 	: i+1 >= len(regex)?
 		regex[i]
 	: !_is_set(regex, "|()", i) && !_is_set(regex, "*+?|)", i+1)?
-		str(regex[i], "·", _explicitize_concatenation(regex, i+1))
+		str(regex[i], "&", _explicitize_concatenation(regex, i+1))
 	: 
 		str(regex[i], _explicitize_concatenation(regex, i+1))
 	;
@@ -157,7 +153,7 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 	: regex[regex_pos] == "|" ?
 		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				_match_prefix_regex(string, regex, string_pos, 
-					_match_prefix(regex, "*+?", "|·", regex_pos+1)))
+					_match_prefix(regex, "*+?", "|&", regex_pos+1)))
 
 	//KLEENE STAR
 	: regex[regex_pos] == "*" ?
@@ -181,10 +177,10 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 				string_pos)
 
 	//CONCATENATION
-	: regex[regex_pos] == "·" ?	
+	: regex[regex_pos] == "&" ?	
 		_match_prefix_regex(string, regex, 
 			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
-			_match_prefix(regex, "*+?", "|·", regex_pos+1))
+			_match_prefix(regex, "*+?", "|&", regex_pos+1))
 
 	//LITERAL
 	: string[string_pos] == regex[regex_pos] ?
