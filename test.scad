@@ -8,30 +8,57 @@ function all(booleans, index=0) =
 	: 
 		all(booleans, index+1)
 	;
+	
+echo([
+	"match_regex:",
+	_explicitize_concatenation("(fo+(bar)?baz)+", 0) == "(f&o+&(b&a&r)?&b&a&z)+",
+	_infix_to_prefix("(f&o+&(b&a&r)?&b&a&z)+", "?*+&|", i=21) == "+&f&+o&?&b&ar&b&az",
+	_compile_regex("(fo+(bar)?baz)+") == "+&f&+o&?&b&ar&b&az",
+	_match_prefix_regex("foooobazfoobarbaz", "+&f&+o&?&b&ar&b&az", 0, 0) == 17,
+	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
+]);
+
+echo([	"_explicitize_concatenation:",
+	_explicitize_concatenation("fo+o"),
+]);
 
 echo([
-	"infix_to_prefix:",
-	_infix_to_prefix("D+E^5", "^*/+-", i=4) == "+D^E5",
-	_infix_to_prefix("(D+E)^5", "^*/+-", i=6) == "^+DE5",
-	_infix_to_prefix("(A+B^C)*D+E", "^*/+-", i=10) == "+*+A^BCDE",
-	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", i=12) == "+*+A^BCD^E5",
+	"_infix_to_prefix:",
 	_infix_to_prefix("A+B^C", "^+", i=4) == "+A^BC",
 	_infix_to_prefix("A+B^C", "+^", i=4) == "^+ABC",
+	_infix_to_prefix("(A+B^C)*D+E^5", "^*/+-", i=12) == "+*+A^BCD^E5",
+	_infix_to_prefix("a?", "?*+&|") == "?a",
+	_infix_to_prefix("a&b?", "?*+&|") == "&a?b",
+	_infix_to_prefix("(a&b)?", "?*+&|") == "?&ab",
+	_infix_to_prefix("a|b?", "?*+&|") == "|a?b",
+	_infix_to_prefix("(a|b)?", "?*+&|") == "?|ab",
+	_infix_to_prefix("a|b&c", "?*+&|") == "|a&bc",
+	_infix_to_prefix("a&b|c", "?*+&|") == "|&abc",
+	_infix_to_prefix("(a|b)&c", "?*+&|") == "&|abc",
+	_infix_to_prefix("a|(b&c)", "?*+&|") == "|a&bc",
+	_infix_to_prefix("a?|b*&c+", "?*+&|") == "|?a&*b+c",
+	_infix_to_prefix("", "?*+&|") == "",
+	_infix_to_prefix("((()))", "?*+&|") == "",
+	_infix_to_prefix( "(()))", "?*+&|"),
+	_infix_to_prefix("((())", "?*+&|"),
+	_infix_to_prefix("a?*+", "?*+&|"),
 ]);
 
 echo([
 	"reverse:",
 	reverse("bar") == "rab",
+	reverse("ba") == "ab",
 	reverse("") == "",
+	reverse(undef) == undef,
 ]);
 
 echo([
 	"_match_prefix_regex:",
 	_match_prefix_regex("foo", "f", 0, 0) == 1,
-	_match_prefix_regex("foo", "·fo", 0, 0),
-	_match_prefix_regex("foo", "·fx", 0, 0) == undef,
-	_match_prefix_regex("foo", "·xf", 0, 0) == undef,
-	_match_prefix_regex("foo", "·xy", 0, 0) == undef,
+	_match_prefix_regex("foo", "&fo", 0, 0) == 2,
+	_match_prefix_regex("foo", "&fx", 0, 0) == undef,
+	_match_prefix_regex("foo", "&xf", 0, 0) == undef,
+	_match_prefix_regex("foo", "&xy", 0, 0) == undef,
 	_match_prefix_regex("foo", "|fx", 0, 0) == 1,
 	_match_prefix_regex("foo", "|xf", 0, 0) == 1,
 	_match_prefix_regex("foo", "|xy", 0, 0) == undef,
@@ -40,12 +67,12 @@ echo([
 	_match_prefix_regex("f", "*o", 0, 0) == 0,
 	_match_prefix_regex("of", "*o", 0, 0) == 1,
 	_match_prefix_regex("oof", "*o", 0, 0) == 2,
-	_match_prefix_regex("oof", "·*of", 0, 0) == 3,
+	_match_prefix_regex("oof", "&*of", 0, 0) == 3,
 	_match_prefix_regex("f", "+o", 0, 0) == undef,
 	_match_prefix_regex("of", "+o", 0, 0) == 1,
 	_match_prefix_regex("oof", "+o", 0, 0) == 2,
-	_match_prefix_regex("oof", "·+of", 0, 0) == 3,
-	_match_prefix_regex("oooofaa", "·*of", 0, 0),
+	_match_prefix_regex("oof", "&+of", 0, 0) == 3,
+	_match_prefix_regex("oooofaa", "&*of", 0, 0) == 5,
 	_match_prefix_regex("foo", ".", 0, 0) == 1,
 	_match_prefix_regex("f", "+.", 0, 0)==1,
 ]);
