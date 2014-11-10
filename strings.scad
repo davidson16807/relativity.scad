@@ -5,39 +5,10 @@ _letter = str(_lowercase, _uppercase);
 _alphanumeric = str(_letter, _digit);
 _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
-// string functions
-
-function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
-	split(tokens, token_seperator, index) == undef?		
-		true
-	: _has_token(string, split(tokens, token_seperator, index), string_seperator) ?	
-		_has_all_tokens(string, tokens, string_seperator, token_seperator, index+1)		
-	: 
-		false
-	;
-
-function _has_any_tokens(string, tokens, seperator=",", index=0) = 
-	split(tokens, seperator, index) == undef?		//no more tokens?
-		false						//then there's no 
-	: _has_token(string, split(tokens, " ", index), " ") ?	//matches
-		true						//then 
-	: 
-		_has_any_tokens(string, tokens, seperator, index+1)//otherwise, try the next token
-	;
-
-function _has_token(string, token, seperator=" ", index=0) = 		
-	split(string, seperator, index) == token ? 		//match?
-		true						//then I guess we found a token		
-	: after(string, seperator, index) == undef ? 		//no more tokens?
-		false						//then I guess there aren't any matches
-	:							
-		_has_token(string, token, seperator, index+1)	//otherwise, try again
-	;
-
-
 
 test = "foo  (1, bar2)";
 regex_test = "foooobazfoobarbaz";
+_regex_ops = "\\?*+&|";
 
 echo([
 	find_regex(test, " +", 0),
@@ -94,26 +65,97 @@ function match_regex(string, pattern, pos=0) = 		//end pos
 function _compile_regex(regex) = 
 	_infix_to_prefix(
 		_explicitize_concatenation(regex), 
-		"?*+&|");
-
-function _explicitize_concatenation(regex, i=0) = 
+		_regex_ops);
+	
+function _explicitize_concatenation(regex, stack="", i=0) = 
 	i >= len(regex)?
 		""
 	: i+1 >= len(regex)?
 		regex[i]
-	: !_is_set(regex, "|()", i) && !_is_set(regex, "*+?|)", i+1)?
-		str(regex[i], "&", _explicitize_concatenation(regex, i+1))
+	: !_is_in(regex[i], "|()") && !_is_in(regex[i+1], "*+?|)")?
+		str(regex[i], "&", 	_explicitize_concatenation(regex, stack, 		i+1))
 	: 
-		str(regex[i], _explicitize_concatenation(regex, i+1))
+		str(regex[i], 		_explicitize_concatenation(regex, stack, 		i+1))
 	;
+	
+//converts infix to postfix using shunting yard algorithm
+function _regex_DFA(in, stack="", i=0) = 
+	in == undef?
+		undef
+	: i == undef?
+		undef
+	: i >= len(in)?
+		stack
+	: in[i] == "["?
+			str(		_regex_set_DFA(in, stack=_push(stack, in[0]), 	i=i+2))
+	: _is_in(in[i], _regex_ops)?
+		stack[0] == "("?
+			str(		_regex_DFA(in, stack=_push(stack, in[i]),	i=i+1))
+		: _precedence(in[i], _regex_ops) < _precedence(stack[0], _regex_ops)?
+			str(		_regex_DFA(in, stack=_push(stack, in[i]),	i=i+1))
+		: len(stack) <= 0?
+			str(		_regex_DFA(in, stack=stack,			i=i+1))
+		:
+			str(stack[0], 	_regex_DFA(in, stack=_pop(stack),		i=i))
+	: in[i] == "("?
+			str(		_regex_DFA(in, stack=_push(stack, in[i]),	i=i+1))
+	: in[i] == ")"?
+		stack[0] == "(" ?
+			str(		_regex_DFA(in, stack=_pop(stack),		i=i+1))
+		: len(stack) <= 0 ?
+			str(		_regex_DFA(in, stack=stack,			i=i+1))
+		: 
+			str(stack[0], 	_regex_DFA(in, stack=_pop(stack),		i=i))
+	:
+			str(in[i], 	_regex_DFA(in, stack=stack, 			i=i+1))
+	;
+	
+//converts infix to postfix using shunting yard algorithm
+function _infix_to_postfix(infix, ops, stack="", i=0) = 
+	infix == undef?
+		undef
+	: ops == undef?
+		undef
+	: i == undef?
+		undef
+	: i >= len(infix)?
+		stack
+	: _is_in(infix[i], ops)?
+		stack[0] == "(" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
+			str(		_infix_to_postfix(infix, ops, stack=_push(stack, infix[i]), 	i=i+1))
+		:
+			str(stack[0], 	_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i))
+	: infix[i] == "("?
+			str(		_infix_to_postfix(infix, ops, stack=_push(stack, infix[i]), 	i=i+1))
+	: infix[i] == ")"?
+		stack[0] == "(" ?
+			str(		_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i+1))
+		: len(stack) <= 0 ?
+			str(		_infix_to_postfix(infix, ops, stack=stack,			i=i+1))
+		: 
+			str(stack[0], 	_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i))
+	:
+			str(infix[i], 	_infix_to_postfix(infix, ops, stack=stack, 			i=i+1))
+	;
+
+function _pop(stack) = 
+	after(stack, 0);
+function _peek(stack) = 
+	stack[0];
+function _push(stack, char) = 
+	str(char, stack);
 
 //converts infix to prefix using shunting yard algorithm
 function _infix_to_prefix(infix, ops, stack="", i=undef) = 
-	i == undef?
+	infix == undef?
+		undef
+	: ops == undef?
+		undef
+	: i == undef?
 		_infix_to_prefix(infix, ops, stack, i=len(infix)-1)
 	: i < 0?
 		reverse(stack)
-	: _is_set(infix, ops, i)?
+	: _is_in(infix[i], ops)?
 		stack[0] == ")" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
 			str(_infix_to_prefix(infix, ops, stack=str(infix[i], stack), 	i=i-1))
 		:
@@ -198,9 +240,9 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 function _match_prefix(regex, unary, binary, index=0) = 
 	index >= len(regex)?
 		len(regex)
-	: _is_set(regex, unary, index)?
+	: _is_in(regex[index], unary)?
 		_match_prefix(regex, unary, binary, index+1)
-	: _is_set(regex, binary, index)?
+	: _is_in(regex[index], binary)?
 		_match_prefix(regex, unary, binary,  _match_prefix(regex, unary, binary, index+1))
 	: 
 		index+1
@@ -214,16 +256,12 @@ function token(string, index, pos=0) =
 		token(string, index-1, _token_end(string, pos))
 	;
 
-
-
-
-
 function _token_start(string, index=0, ignore_space=true) = 
 	index >= len(string)?
 		undef
 	: index == len(string)?
 		len(string)
-	: _is_set(string, _whitespace, index) && ignore_space?
+	: _is_in(string[index], _whitespace) && ignore_space?
 		_match_set(string, _whitespace, index)
 	: //symbol
 		index
@@ -233,9 +271,9 @@ function _token_start(string, index=0, ignore_space=true) =
 function _token_end(string, index=0, ignore_space=true, tokenize_quotes=true) = 
 	index >= len(string)?
 		len(string)
-	: _is_set(string, _alphanumeric, index) ?
+	: _is_in(string[index], _alphanumeric) ?
 		_match_set(string, _alphanumeric, index)
-	: _is_set(string, _whitespace, index) ? (
+	: _is_in(string[index], _whitespace) ? (
 		ignore_space?
 			_token_end(string, _match_set(string, _whitespace, index))
 		:
@@ -277,7 +315,7 @@ function trim(string) =
 function _match_set(string, set, index) = 
 	index >= len(string)?
 		len(string)
-	: _is_set(string, set, index)?
+	: _is_in(string[index], set )?
 		_match_set(string, set, index+1)
 	: 
 		index
@@ -286,7 +324,7 @@ function _match_set(string, set, index) =
 function _match_set_reverse(string, set, index) = 
 	index <= 0?
 		0
-	: _is_set(string, set, index-1)?
+	: _is_in(string[index-1], set)?
 		_match_set_reverse(string, set, index-1)
 	: 
 		index
@@ -309,12 +347,19 @@ function _match_quote(string, quote_char, index) =
 
 //echo(search(" \t\r\n", "foo "));
 
-//echo(_is_set(test, _symbol, 6));
+//echo(_is_in(test[6], _symbol));
 
-function _is_set(string, set, index=0) = 
-	len(search(string[index],set)) > 0;
-
-
+// quicker in theory, but slow in practice due to generated warnings
+//function _is_in(string, set, index=0) = 
+//	len(search(string[index],set)) > 0;
+function _is_in(char, string, index=0) = 
+	index >= len(string)?
+		false
+	: char == string[index]?
+		true
+	:
+		_is_in(char, string, index+1)
+	;
 
 //echo(after(test, _split_end(test, " ", 1)));
 
