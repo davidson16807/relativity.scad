@@ -89,7 +89,7 @@ function _explicitize_concatenation(regex, stack="", i=0) =
 		""
 	: i+1 >= len(regex)?
 		regex[i]
-	: !_is_in(regex[i], "|()") && !_is_in(regex[i+1], "*+?|)")?
+	: !_is_in(regex[i], "\\|()") && !_is_in(regex[i+1], "*+?|)")?
 		str(regex[i], "&", 	_explicitize_concatenation(regex, stack, 			i+1))
 	: 
 		str(regex[i], 		_explicitize_concatenation(regex, stack, 			i+1))
@@ -207,6 +207,40 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 		_match_prefix_regex(string, regex, 
 			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
 			_match_prefix(regex, "*+?", "|&", regex_pos+1))
+			
+	//ESCAPE CHARACTER
+	: regex[regex_pos] == "\\"?
+		regex[regex_pos+1] == "d"?
+			_is_in(string[string_pos], _digit)?
+				string_pos+1
+			: 
+				undef
+		: regex[regex_pos+1] == "s"?
+			_is_in(string[string_pos], _whitespace)?
+				string_pos+1
+			: 
+				undef
+		: regex[regex_pos+1] == "w"?
+			_is_in(string[string_pos], _alphanumeric)?
+				string_pos+1
+			: 
+				undef
+		regex[regex_pos+1] == "D"?
+			!_is_in(string[string_pos], _digit)?
+				string_pos+1
+			: 
+				undef
+				
+		: regex[regex_pos+1] == "S"?
+			!_is_in(string[string_pos], _whitespace)?
+				string_pos+1
+			: 
+				undef
+		: regex[regex_pos+1] == "W"?
+			!_is_in(string[string_pos], _alphanumeric)?
+				string_pos+1
+			: 
+				undef
 
 	//LITERAL
 	: string[string_pos] == regex[regex_pos] ?
