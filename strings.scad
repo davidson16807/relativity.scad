@@ -32,13 +32,13 @@ function _between_vector(string, vector) =
 	;
 	
 //function replace_regex(string, pattern, replacement) = undef;	//string	
-function split_regex(string, pattern, index) =			//string	
-	index <= 0?
-		before(string, 0, find_regex(string, pattern, index).x)
-	:
-		between(string, 
-			find_regex(string, pattern, index).y, 
-			find_regex(string, pattern, index+1).x);
+//function split_regex(string, pattern, index) =			//string	
+//	index <= 0?
+//		before(string, 0, find_regex(string, pattern, index).x)
+//	:
+//		between(string, 
+//			find_regex(string, pattern, index).y, 
+//			find_regex(string, pattern, index+1).x);
 			
 function contains_regex(string, pattern) = 			//bool		
 	find_regex(string, pattern) != undef;
@@ -64,52 +64,36 @@ function match_regex(string, pattern, pos=0) = 		//end pos
 
 function _compile_regex(regex) = 
 	_infix_to_prefix(
-		_explicitize_concatenation(regex), 
+		_explicitize_concatenation(
+			_explicitize_union(regex)), 
 		_regex_ops);
-	
+		
+
+function _explicitize_union(regex, stack="", i=0) = 
+	i >= len(regex)?
+		""
+	//: i+1 >= len(regex)?
+	//	regex[i]
+	: stack[0] == "["?
+		regex[i] == "]"?
+			str(")", 		_explicitize_union(regex, stack=_pop(stack),		i=i+1))
+		:
+			str("|", regex[i], 	_explicitize_union(regex, stack=stack,			i=i+1))
+	: regex[i] == "["?
+			str("(", regex[i+1],	_explicitize_union(regex, stack=_push(stack, regex[i]), i=i+2))
+	:		
+			str(regex[i], 	_explicitize_union(regex, stack=stack,				i=i+1))
+	;
 function _explicitize_concatenation(regex, stack="", i=0) = 
 	i >= len(regex)?
 		""
 	: i+1 >= len(regex)?
 		regex[i]
 	: !_is_in(regex[i], "|()") && !_is_in(regex[i+1], "*+?|)")?
-		str(regex[i], "&", 	_explicitize_concatenation(regex, stack, 		i+1))
+		str(regex[i], "&", 	_explicitize_concatenation(regex, stack, 			i+1))
 	: 
-		str(regex[i], 		_explicitize_concatenation(regex, stack, 		i+1))
+		str(regex[i], 		_explicitize_concatenation(regex, stack, 			i+1))
 	;
-	
-//converts infix to postfix using shunting yard algorithm
-function _regex_DFA(in, stack="", i=0) = 
-	in == undef?
-		undef
-	: i == undef?
-		undef
-	: i >= len(in)?
-		stack
-	: in[i] == "["?
-			str(		_regex_set_DFA(in, stack=_push(stack, in[0]), 	i=i+2))
-	: _is_in(in[i], _regex_ops)?
-		stack[0] == "("?
-			str(		_regex_DFA(in, stack=_push(stack, in[i]),	i=i+1))
-		: _precedence(in[i], _regex_ops) < _precedence(stack[0], _regex_ops)?
-			str(		_regex_DFA(in, stack=_push(stack, in[i]),	i=i+1))
-		: len(stack) <= 0?
-			str(		_regex_DFA(in, stack=stack,			i=i+1))
-		:
-			str(stack[0], 	_regex_DFA(in, stack=_pop(stack),		i=i))
-	: in[i] == "("?
-			str(		_regex_DFA(in, stack=_push(stack, in[i]),	i=i+1))
-	: in[i] == ")"?
-		stack[0] == "(" ?
-			str(		_regex_DFA(in, stack=_pop(stack),		i=i+1))
-		: len(stack) <= 0 ?
-			str(		_regex_DFA(in, stack=stack,			i=i+1))
-		: 
-			str(stack[0], 	_regex_DFA(in, stack=_pop(stack),		i=i))
-	:
-			str(in[i], 	_regex_DFA(in, stack=stack, 			i=i+1))
-	;
-	
 //converts infix to postfix using shunting yard algorithm
 function _infix_to_postfix(infix, ops, stack="", i=0) = 
 	infix == undef?
