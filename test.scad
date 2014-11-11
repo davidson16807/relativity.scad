@@ -17,6 +17,7 @@ echo([
 	find_regex("foo bar baz", "ba[rz]", 1),
 	show_regex("foo bar baz", "ba[rz]"),
 	show_regex("foo bar baz", "ba[rz]", 1),
+	show_regex("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d"),
 ]);
 echo([
 	"match_regex:",
@@ -49,10 +50,10 @@ echo([	"_explicitize_concatenation:",
 	_explicitize_concatenation("fo+o") == "f&o+&o",
 	_explicitize_concatenation("fo|o") == "f&o|o",
 	_explicitize_concatenation("fo|o") == "f&o|o",
-	_explicitize_concatenation("fo+"),
-	_explicitize_concatenation("fo|"),
+	_explicitize_concatenation("fo+") == "f&o+",
+	_explicitize_concatenation("fo|") == "f&o|",
 	//escape characters
-	_explicitize_concatenation("\d\d") == "\d&\d",
+	_explicitize_concatenation("\\d\\s") == "\\d&\\s",
 	//_explicitize_concatenation("\\\\\\\\") == "\\\\&\\\\",
 	_explicitize_concatenation("&&") == "\&&\&",
 	//edge cases
@@ -161,6 +162,11 @@ echo([
 	//wildcard
 	_match_prefix_regex("foo", ".", 0, 0) == 1,
 	_match_prefix_regex("f", "+.", 0, 0)==1,
+	//anchor
+	_match_prefix_regex("foo", "&^&fo", 0, 0) == 2,
+	_match_prefix_regex(" foo", "&^&fo", 1, 0) == undef,
+	_match_prefix_regex("foo", "&f&o&o$", 0, 0) == 3,
+	_match_prefix_regex("foo ", "&f&o&o$", 0, 0) == undef,
 	//edge cases
 	_match_prefix_regex("f", "f", 0, 0)==1,
 	_match_prefix_regex(undef, "f", 0, 0)==undef,
