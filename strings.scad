@@ -166,20 +166,35 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 		undef
 	: regex == undef?
 		undef
-	: string_pos == undef?
-		undef
+		
+	//regex length
 	: regex_pos == undef?
 		undef
-	: string_pos >= len(string)?
-		undef
 	: regex_pos >= len(regex)?
+		undef
+		
+	
+	//string length and anchors
+	: regex[regex_pos] == "^"?
+		string_pos == 0?
+			string_pos
+		:
+			undef
+	: regex[regex_pos] == "$"?
+		string_pos >= len(string)?
+			string_pos
+		:
+			undef
+	: string_pos == undef?
+		undef
+	: string_pos >= len(string)?
 		undef
 
 	//UNION
 	: regex[regex_pos] == "|" ?
 		_ensure_defined(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
 				_match_prefix_regex(string, regex, string_pos, 
-					_match_prefix(regex, "*+?", "|&", regex_pos+1)))
+					_match_prefix(regex, "\\*+?", "|&", regex_pos+1)))
 
 	//KLEENE STAR
 	: regex[regex_pos] == "*" ?
@@ -206,7 +221,7 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 	: regex[regex_pos] == "&" ?	
 		_match_prefix_regex(string, regex, 
 			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
-			_match_prefix(regex, "*+?", "|&", regex_pos+1))
+			_match_prefix(regex, "\\*+?", "|&", regex_pos+1))
 			
 	//ESCAPE CHARACTER
 	: regex[regex_pos] == "\\"?
@@ -225,7 +240,7 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 				string_pos+1
 			: 
 				undef
-		regex[regex_pos+1] == "D"?
+		: regex[regex_pos+1] == "D"?
 			!_is_in(string[string_pos], _digit)?
 				string_pos+1
 			: 
@@ -240,6 +255,11 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 			!_is_in(string[string_pos], _alphanumeric)?
 				string_pos+1
 			: 
+				undef
+		:
+			string[string_pos] == regex[regex_pos+1]?
+				string_pos+1
+			:
 				undef
 
 	//LITERAL
