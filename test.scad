@@ -10,12 +10,37 @@ function all(booleans, index=0) =
 	;
 	
 echo([
+	"regex:",
+	contains_regex("foo bar baz", "ba[rz]"),
+	contains_regex("foo bar baz", "spam"),
+	find_regex("foo bar baz", "ba[rz]"),
+	find_regex("foo bar baz", "ba[rz]", 1),
+	show_regex("foo bar baz", "ba[rz]"),
+	show_regex("foo bar baz", "ba[rz]", 1),
+]);
+echo([
 	"match_regex:",
+	_explicitize_union("(fo+(bar)?baz)+", 0) == "(fo+(bar)?baz)+",
 	_explicitize_concatenation("(fo+(bar)?baz)+", 0) == "(f&o+&(b&a&r)?&b&a&z)+",
 	_infix_to_prefix("(f&o+&(b&a&r)?&b&a&z)+", _regex_ops, i=21) == "+&f&+o&?&b&ar&b&az",
 	_compile_regex("(fo+(bar)?baz)+") == "+&f&+o&?&b&ar&b&az",
 	_match_prefix_regex("foooobazfoobarbaz", "+&f&+o&?&b&ar&b&az", 0, 0) == 17,
 	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
+	
+	_explicitize_union("(give me (f[aeiou]+|dabajabaza!))+", 0) == "(give me (f(a|e|i|o|u)+|dabajabaza!))+",
+	_explicitize_concatenation("(give me (f(a|e|i|o|u)+|dabajabaza!))+", 0) == "(g&i&v&e& &m&e& &(f&(a|e|i|o|u)+|d&a&b&a&j&a&b&a&z&a&!))+",
+	match_regex("give me foo give me fie give me dabajabaza!", "(give me (f[aeiou]+ |dabajabaza!))+") == 43,
+]);
+
+echo([	"_explicitize_union:",
+	//happy path
+	_explicitize_union("[foo]") == "(f|o|o)",
+	_explicitize_union("foo[bar]baz") == "foo(b|a|r)baz",
+	_explicitize_union("foo[bar]") == "foo(b|a|r)",
+	_explicitize_union("[foo]bar") == "(f|o|o)bar",
+	//edge cases
+	_explicitize_union("f") == "f",
+	_explicitize_union("") == "",
 ]);
 
 echo([	"_explicitize_concatenation:",
@@ -28,7 +53,7 @@ echo([	"_explicitize_concatenation:",
 	_explicitize_concatenation("fo|"),
 	//escape characters
 	_explicitize_concatenation("\d\d") == "\d&\d",
-	_explicitize_concatenation("\\\\\\\\") == "\\\\&\\\\",
+	//_explicitize_concatenation("\\\\\\\\") == "\\\\&\\\\",
 	_explicitize_concatenation("&&") == "\&&\&",
 	//edge cases
 	_explicitize_concatenation("f") == "f",
