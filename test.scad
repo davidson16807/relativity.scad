@@ -11,8 +11,9 @@ function all(booleans, index=0) =
 	
 echo([
 	"regex:",
-	contains_regex("foo bar baz", "ba[rz]"),
-	contains_regex("foo bar baz", "spam"),
+	replace_regex(regex_test, "fo+", "spam") == "spambazspambarbaz",
+	contains_regex("foo bar baz", "ba[rz]") == true,
+	contains_regex("foo bar baz", "spam") == false,
 	find_regex("foo bar baz", "ba[rz]"),
 	find_regex("foo bar baz", "ba[rz]", 1),
 	show_regex("foo bar baz", "ba[rz]"),
@@ -110,6 +111,7 @@ echo([
 	//escape characters
 	_infix_to_prefix("\\d?", _regex_ops) == "?\\d",
 	_infix_to_prefix("\\s&\\d?", _regex_ops) == "&\\s?\\d",
+	_infix_to_prefix("\\\\&\\\\?", _regex_ops) == "&\\\\?\\\\",
 	_infix_to_prefix("\\d?|b*&\\d+", _regex_ops) == "|?\\d&*b+\\d",
 	//invalid syntax
 	_infix_to_prefix("((()))", _regex_ops) == "",
@@ -294,4 +296,4 @@ echo([	"after:",
 	after("foo", 2) == "",
 	after("foo", 3) == "",
 	after("foo", undef) == undef,
-      ]);
+      ]); 
