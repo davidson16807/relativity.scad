@@ -11,9 +11,9 @@ regex_test = "foooobazfoobarbaz";
 _regex_ops = "\\?*+&|";
 
 function show_regex(string, pattern, index=0) = 		//string
-	_between_vector(string, find_regex(string, pattern, index));
+	_show_between_range(string, find_regex(string, pattern, index));
 	
-function _between_vector(string, vector) = 
+function _show_between_range(string, vector) = 
 	vector == undef?
 		undef
 	: 
@@ -25,15 +25,20 @@ function replace_regex(string, pattern, replacement) = 	//string
 		undef
 	: pos >= len(string)?
 		""
-	: contains_regex(string, pattern)?
-		str(	before(string, find_regex(string, pattern).x),
+	:
+		_replace_between_range(string, pattern, replacement, find_regex(string, pattern))
+	;
+function _replace_between_range(string, pattern, replacement, range) = 
+	range == undef?
+		str(	before(string, range.x),
 			replacement,
-			replace_regex(after(string, find_regex(string, pattern).y-1), 
+			replace_regex(after(string, range.y-1), 
 				pattern, replacement)
 		)
 	: 
 		string
 	;
+		
 	
 //function split_regex(string, pattern, index) =		//string	
 //	index <= 0?
@@ -382,13 +387,6 @@ function _match_quote(string, quote_char, index) =
 		_match_quote(string, quote_char, index+1)
 	;
 
-//function _match_range(string, minimum, maximum, index) = 
-
-
-
-//echo(search(" \t\r\n", "foo "));
-
-//echo(_is_in(test[6], _symbol));
 
 // quicker in theory, but slow in practice due to generated warnings
 //function _is_in(string, set, index=0) = 
@@ -402,14 +400,6 @@ function _is_in(char, string, index=0) =
 		_is_in(char, string, index+1)
 	;
 
-//echo(after(test, _split_end(test, " ", 1)));
-
-//echo( _split_end(test, " ", -1));
-
-//echo( _split_end(test, " ", 0));
-
-//echo( between(test, undef, 3) );
-
 function split(string, seperator=" ", index=0, ignore_case = false) = 
 	!contains(string, seperator, ignore_case=ignore_case) ?
 		string
@@ -422,10 +412,23 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 				_ensure_defined(find(string, seperator, index), 		 len(string)+1)) 
 	;
 	
+function replace(string, replaced, replacement, ignore_case=ignore_case) = 	//string
+	string == undef?
+		undef
+	: pos >= len(string)?
+		""
+	: contains(string, replaced)?
+		str(	before(string, find(string, replaced, ignore_case=ignore_case)),
+			replacement,
+			replace(after(string, find(string, replaced, ignore_case=ignore_case)+len(replaced)-1), 
+				replaced, replacement, ignore_case=ignore_case)
+		)
+	: 
+		string
+	;
 
 function contains(string, substring, index=0, ignore_case=false) = 
 	find(string, substring, ignore_case=ignore_case) != undef; 
-
 
 
 function find(string, goal, index=0, pos=0, ignore_case=false) = 
