@@ -10,17 +10,6 @@ test = "foo  (1, bar2)";
 regex_test = "foooobazfoobarbaz";
 _regex_ops = "\\?*+&|";
 
-echo([
-	find_regex(test, " +", 0),
-	find_regex(test, " +", 1),
-	find_regex(test, " +", 2),
-	_between_vector(test, [0,5]),
-	show_regex(test, "o+", 0),
-	split_regex(test, " +", 0),
-]);
-
-
-
 function show_regex(string, pattern, index=0) = 		//string
 	_between_vector(string, find_regex(string, pattern, index));
 	
@@ -31,8 +20,22 @@ function _between_vector(string, vector) =
 		between(string, vector.x, vector.y)
 	;
 	
-//function replace_regex(string, pattern, replacement) = undef;	//string	
-//function split_regex(string, pattern, index) =			//string	
+function replace_regex(string, pattern, replacement) = 	//string
+	string == undef?
+		undef
+	: pos >= len(string)?
+		""
+	: contains_regex(string, pattern)?
+		str(	before(string, find_regex(string, pattern).x),
+			replacement,
+			replace_regex(after(string, find_regex(string, pattern).y-1), 
+				pattern, replacement)
+		)
+	: 
+		string
+	;
+	
+//function split_regex(string, pattern, index) =		//string	
 //	index <= 0?
 //		before(string, 0, find_regex(string, pattern, index).x)
 //	:
@@ -90,9 +93,9 @@ function _explicitize_concatenation(regex, stack="", i=0) =
 	: i+1 >= len(regex)?
 		regex[i]
 	: !_is_in(regex[i], "\\|()") && !_is_in(regex[i+1], "*+?|)")?
-		str(regex[i], "&", 	_explicitize_concatenation(regex, stack, 			i+1))
+		str(regex[i], "&", 	_explicitize_concatenation(regex, stack, i+1))
 	: 
-		str(regex[i], 		_explicitize_concatenation(regex, stack, 			i+1))
+		str(regex[i], 		_explicitize_concatenation(regex, stack, i+1))
 	;
 //converts infix to postfix using shunting yard algorithm
 function _infix_to_postfix(infix, ops, stack="", i=0) = 
@@ -121,7 +124,7 @@ function _infix_to_postfix(infix, ops, stack="", i=0) =
 	:
 			str(infix[i], 	_infix_to_postfix(infix, ops, stack=stack, 			i=i+1))
 	;
-
+	
 function _pop(stack) = 
 	after(stack, 0);
 function _peek(stack) = 
@@ -159,7 +162,7 @@ function _infix_to_prefix(infix, ops, stack="", i=undef) =
 
 function _precedence(op, ops) = 
 	search(op, ops)[0];
-	
+		
 function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 	//INVALID INPUT
 	string == undef?
