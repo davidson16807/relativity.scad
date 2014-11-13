@@ -11,55 +11,54 @@ function all(booleans, index=0) =
 	
 echo([
 	"regex:",
-	replace_regex(regex_test, "fo+", "spam") == "spambazspambarbaz",
-	contains_regex("foo bar baz", "ba[rz]") == true,
-	contains_regex("foo bar baz", "spam") == false,
-	find_regex("foo bar baz", "ba[rz]"),
-	find_regex("foo bar baz", "ba[rz]", 1),
-	show_regex("foo bar baz", "ba[rz]"),
-	show_regex("foo bar baz", "ba[rz]", 1),
-	show_regex("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d"),
+	contains("foo bar baz", "ba[rz]", regex=true) == true,
+	contains("foo bar baz", "spam", regex=true) == false,
+	find("foo bar baz", "ba[rz]", regex=true),
+	find("foo bar baz", "ba[rz]", 1, regex=true),
+	grep("foo bar baz", "ba[rz]", regex=true),
+	grep("foo bar baz", "ba[rz]", 1, regex=true),
+	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d", regex=true), 
 ]);
 echo([
 	"match_regex:",
-	_explicitize_union("(fo+(bar)?baz)+", 0) == "(fo+(bar)?baz)+",
-	_explicitize_concatenation("(fo+(bar)?baz)+", 0) == "(f&o+&(b&a&r)?&b&a&z)+",
+	_explicitize_regex_alternation("(fo+(bar)?baz)+", 0) == "(fo+(bar)?baz)+",
+	_explicitize_regex_concatenation("(fo+(bar)?baz)+", 0) == "(f&o+&(b&a&r)?&b&a&z)+",
 	_infix_to_prefix("(f&o+&(b&a&r)?&b&a&z)+", _regex_ops, i=21) == "+&f&+o&?&b&ar&b&az",
 	_compile_regex("(fo+(bar)?baz)+") == "+&f&+o&?&b&ar&b&az",
 	_match_prefix_regex("foooobazfoobarbaz", "+&f&+o&?&b&ar&b&az", 0, 0) == 17,
-	match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
+	_match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
 	
-	_explicitize_union("(give me (f[aeiou]+|dabajabaza!))+", 0) == "(give me (f(a|e|i|o|u)+|dabajabaza!))+",
-	_explicitize_concatenation("(give me (f(a|e|i|o|u)+|dabajabaza!))+", 0) == "(g&i&v&e& &m&e& &(f&(a|e|i|o|u)+|d&a&b&a&j&a&b&a&z&a&!))+",
-	match_regex("give me foo give me fie give me dabajabaza!", "(give me (f[aeiou]+ |dabajabaza!))+") == 43,
+	_explicitize_regex_alternation("(give me (f[aeiou]+|dabajabaza!))+", 0),
+	_explicitize_regex_concatenation("(give me (f(a|e|i|o|u)+|dabajabaza!))+", 0) == "(g&i&v&e& &m&e& &(f&(a|e|i|o|u)+|d&a&b&a&j&a&b&a&z&a&!))+",
+	_match_regex("give me foo give me fie give me dabajabaza!", "(give me (f[aeiou]+ |dabajabaza!))+") == 43,
 ]);
 
-echo([	"_explicitize_union:",
+echo([	"_explicitize_regex_alternation:",
 	//happy path
-	_explicitize_union("[foo]") == "(f|o|o)",
-	_explicitize_union("foo[bar]baz") == "foo(b|a|r)baz",
-	_explicitize_union("foo[bar]") == "foo(b|a|r)",
-	_explicitize_union("[foo]bar") == "(f|o|o)bar",
+	_explicitize_regex_alternation("[foo]") == "(f|o|o)",
+	_explicitize_regex_alternation("foo[bar]baz") == "foo(b|a|r)baz",
+	_explicitize_regex_alternation("foo[bar]") == "foo(b|a|r)",
+	_explicitize_regex_alternation("[foo]bar") == "(f|o|o)bar",
 	//edge cases
-	_explicitize_union("f") == "f",
-	_explicitize_union("") == "",
+	_explicitize_regex_alternation("f") == "f",
+	_explicitize_regex_alternation("") == "",
 ]);
 
-echo([	"_explicitize_concatenation:",
+echo([	"_explicitize_regex_concatenation:",
 	//happy path
-	_explicitize_concatenation("foo") == "f&o&o",
-	_explicitize_concatenation("fo+o") == "f&o+&o",
-	_explicitize_concatenation("fo|o") == "f&o|o",
-	_explicitize_concatenation("fo|o") == "f&o|o",
-	_explicitize_concatenation("fo+") == "f&o+",
-	_explicitize_concatenation("fo|") == "f&o|",
+	_explicitize_regex_concatenation("foo") == "f&o&o",
+	_explicitize_regex_concatenation("fo+o") == "f&o+&o",
+	_explicitize_regex_concatenation("fo|o") == "f&o|o",
+	_explicitize_regex_concatenation("fo|o") == "f&o|o",
+	_explicitize_regex_concatenation("fo+") == "f&o+",
+	_explicitize_regex_concatenation("fo|") == "f&o|",
 	//escape characters
-	_explicitize_concatenation("\\d\\s") == "\\d&\\s",
-	//_explicitize_concatenation("\\\\\\\\") == "\\\\&\\\\",
-	_explicitize_concatenation("&&") == "\&&\&",
+	_explicitize_regex_concatenation("\\d\\s") == "\\d&\\s",
+	//_explicitize_regex_concatenation("\\\\\\\\") == "\\\\&\\\\",
+	_explicitize_regex_concatenation("&&") == "\&&\&",
 	//edge cases
-	_explicitize_concatenation("f") == "f",
-	_explicitize_concatenation("") == "",
+	_explicitize_regex_concatenation("f") == "f",
+	_explicitize_regex_concatenation("") == "",
 ]);
 
 echo([
@@ -111,7 +110,6 @@ echo([
 	//escape characters
 	_infix_to_prefix("\\d?", _regex_ops) == "?\\d",
 	_infix_to_prefix("\\s&\\d?", _regex_ops) == "&\\s?\\d",
-	_infix_to_prefix("\\\\&\\\\?", _regex_ops) == "&\\\\?\\\\",
 	_infix_to_prefix("\\d?|b*&\\d+", _regex_ops) == "|?\\d&*b+\\d",
 	//invalid syntax
 	_infix_to_prefix("((()))", _regex_ops) == "",
@@ -296,4 +294,4 @@ echo([	"after:",
 	after("foo", 2) == "",
 	after("foo", 3) == "",
 	after("foo", undef) == undef,
-      ]); 
+      ]);
