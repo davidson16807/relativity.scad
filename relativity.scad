@@ -236,12 +236,12 @@ function _css_select(tag, class, id, selector, index=0) =
 	: starts_with(selector, "#") ?
 		id == after(selector, "#")
 	: starts_with(selector, ".") ?
-		_has_token(class, after(selector, "."))
+		_has_token(class, after(selector, ".")) ?
 	: starts_with(selector, "*")
 		id == after(selector, "#") || _has_token(class, after(selector, ".")) || tag == selector
 	: 
 		tag == selector
-		
+	;
 //echo(_has_all_tokens("foo bar baz", "foo baz"));
 //echo(_has_all_tokens("foo bar baz", "spam baz"));
 function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
