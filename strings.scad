@@ -16,21 +16,21 @@ _regex_ops = "\\?*+&|";
 
 
 
-function grep(string, pattern, index=0) = 		//string
-	_between_range(string, _find_regex(string, pattern, index));
+function grep(string, pattern, index=0, ignore_case=false) = 		//string
+	_between_range(string, _find_regex(string, pattern, index, ignore_case=ignore_case));
 
 
 
 
 
-function replace(string, replaced, replacement, ignore_case=ignore_case, regex=false) = 	//string
+function replace(string, replaced, replacement, ignore_case=false, regex=false) = 	//string
 	regex?
-		_replace_regex(string, replaced, replacement)
+		_replace_regex(string, replaced, replacement, ignore_case=ignore_case)
 	: string == undef?
 		undef
 	: pos >= len(string)?
 		""
-	: contains(string, replaced)?
+	: contains(string, replaced, ignore_case=ignore_case)?
 		str(	before(string, find(string, replaced, ignore_case=ignore_case)),
 			replacement,
 			replace(after(string, find(string, replaced, ignore_case=ignore_case)+len(replaced)-1), 
@@ -39,20 +39,24 @@ function replace(string, replaced, replacement, ignore_case=ignore_case, regex=f
 	: 
 		string
 	;
-function _replace_regex(string, pattern, replacement) = 	//string
+function _replace_regex(string, pattern, replacement, ignore_case=false) = 	//string
 	string == undef?
 		undef
 	: pos >= len(string)?
 		""
-	:
-		_replace_between_range(string, pattern, replacement, _find_regex(string, pattern))
+	: 
+		_replace_between_range(string, pattern, replacement, 
+			_find_regex(string, pattern, ignore_case=ignore_case),
+			ignore_case = ignore_case
+		)
 	;
-function _replace_between_range(string, pattern, replacement, range) = 
-	range == undef?
+function _replace_between_range(string, pattern, replacement, range, ignore_case=false) = 
+	range != undef?
 		str(	before(string, range.x),
 			replacement,
 			_replace_regex(after(string, range.y-1), 
-				pattern, replacement)
+				pattern, replacement,
+				ignore_case=ignore_case)
 		)
 	: 
 		string
@@ -67,10 +71,11 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 	: index < 0?
 		undef
 	: index == 0?
-		between(string, 0, find(string, seperator, index))
+		between(string, 0, find(string, seperator, index, ignore_case=ignore_case))
 	:
-		between(string, _null_coalesce(find(string, seperator, index-1)+len(seperator), len(string)+1), 
-				_null_coalesce(find(string, seperator, index), 		 len(string)+1)) 
+		between(string, 
+			_null_coalesce(find(string, seperator, index-1, ignore_case=ignore_case)+len(seperator), len(string)+1), 
+			_null_coalesce(find(string, seperator, index, ignore_case=ignore_case), 		 len(string)+1)) 
 	;
 //function _split_regex(string, pattern, index) =		//string	
 //	index <= 0?
@@ -85,19 +90,19 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 
 function contains(string, substring, ignore_case=false, regex=false) = 
 	regex?
-		_contains_regex(string, substring)
+		_contains_regex(string, substring, ignore_case=ignore_case)
 	:
 		find(string, substring, ignore_case=ignore_case) != undef
 	; 
-function _contains_regex(string, pattern) = 			//bool		
-	_find_regex(string, pattern) != undef;
+function _contains_regex(string, pattern, ignore_case=false) = 			//bool		
+	_find_regex(string, pattern, ignore_case=ignore_case) != undef;
 	
 
 
 
 function find(string, goal, index=0, pos=0, ignore_case=false, regex=false) = 
 	regex?
-		_find_regex(string, goal)
+		_find_regex(string, goal, index, ignore_case=ignore_case)
 	: len(goal) == 1 && !ignore_case?
 		search(goal, after(string, pos), 0)[0][index] + pos + 1
 	: index <= 0?
@@ -117,34 +122,39 @@ function _find_first(string, goal, pos=0, ignore_case=false, regex=false) =
 		undef
 	: pos >= len(string)?
 		undef
-	: starts_with(string, goal, pos, ignore_case)?
+	: starts_with(string, goal, pos, ignore_case=ignore_case)?
 		pos
 	:
-		_find_first(string, goal, pos+1, ignore_case)
+		_find_first(string, goal, pos+1, ignore_case=ignore_case)
 	;
-function _find_regex(string, pattern, index=0, pos=0) = 		//[start,end]
+function _find_regex(string, pattern, index=0, pos=0, ignore_case=false) = 		//[start,end]
 	index == 0?
-		_find_first_regex(string, pattern, pos)
+		_find_first_regex(string, pattern, pos, ignore_case=ignore_case)
 	:
 		_find_regex(string, pattern, 
 			index = index-1,
-			pos = _find_first_regex(string, pattern, pos).y + 1)
+			pos = _find_first_regex(string, pattern, pos, ignore_case=ignore_case).y + 1,
+			ignore_case=ignore_case)
 	;
-function _find_first_regex(string, pattern, pos=0) =
+function _find_first_regex(string, pattern, pos=0, ignore_case=false) =
 	pos >= len(string)?
 		undef
-	: _coalesce_on([pos, _match_regex(string, pattern, pos)], 
+	: _coalesce_on([pos, _match_regex(string, pattern, pos, ignore_case=ignore_case)], 
 		[pos, undef],
-		_find_first_regex(string, pattern, pos+1));
+		_find_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
 
 
 
 
 
-function starts_with(string, start, index=0, ignore_case=false) = 
-	equals(	substring(string, index, len(start)), 
-		start, 
-		ignore_case=ignore_case);
+function starts_with(string, start, index=0, ignore_case=false, regex=false) = 
+	regex?
+		_match_regex(string, start, index) != undef
+	:
+		equals(	substring(string, index, len(start)), 
+			start, 
+			ignore_case=ignore_case)
+	;
 function ends_with(string, end, ignore_case=false) =
 	equals(	after(string, len(string)-len(end)-1), 
 		end,
@@ -153,20 +163,15 @@ function ends_with(string, end, ignore_case=false) =
 
 
 
-function equals(this, that, ignore_case=false) =
-	ignore_case?
-		lower(this) == lower(that)
-	:
-		this==that
-	;
 
 
 
 
-
-function _match_regex(string, pattern, pos=0) = 		//end pos
+function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 	_match_prefix_regex(string,
-		_compile_regex(pattern), pos, 0);
+		_compile_regex(pattern), 
+		pos, 0,
+		ignore_case=ignore_case);
 
 function _compile_regex(regex) = 
 	_infix_to_prefix(
@@ -263,7 +268,7 @@ function _push(stack, char) =
 function _precedence(op, ops) = 
 	search(op, ops)[0];
 		
-function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
+function _match_prefix_regex(string, regex, string_pos, regex_pos=0, ignore_case=false)=
 	//INVALID INPUT
 	string == undef?
 		undef
@@ -295,36 +300,55 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 
 	//ALTERNATION
 	: regex[regex_pos] == "|" ?
-		_null_coalesce(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
-				_match_prefix_regex(string, regex, string_pos, 
-					_match_prefix(regex, "\\*+?", "|&", regex_pos+1)))
+		_null_coalesce(
+			_match_prefix_regex(string, regex, string_pos, 
+				regex_pos+1, 
+				ignore_case=ignore_case),
+			_match_prefix_regex(string, regex, string_pos, 
+				_match_prefix(regex, "\\*+?", "|&", regex_pos+1), 
+				ignore_case=ignore_case)
+			)
 
 	//KLEENE STAR
 	: regex[regex_pos] == "*" ?
 		_null_coalesce(
 			_match_prefix_regex(string, regex,
-				_match_prefix_regex(string, regex, string_pos, regex_pos+1),
-				regex_pos),
+				_match_prefix_regex(string, regex, string_pos, 
+					regex_pos+1, 
+					ignore_case=ignore_case),
+				regex_pos, 
+				ignore_case=ignore_case),
 			string_pos)
 
 	//KLEENE PLUS
 	: regex[regex_pos] == "+" ?
 		_null_coalesce(
 			_match_prefix_regex(string, regex,
-				_match_prefix_regex(string, regex, string_pos, regex_pos+1),
-				regex_pos),
-			_match_prefix_regex(string, regex, string_pos, regex_pos+1))
+				_match_prefix_regex(string, regex, string_pos, 
+					regex_pos+1, 
+					ignore_case=ignore_case),
+				regex_pos, 
+				ignore_case=ignore_case),
+			_match_prefix_regex(string, regex, string_pos, 
+				regex_pos+1, 
+				ignore_case=ignore_case)
+		)
 
 	//OPTION
 	: regex[regex_pos] == "?" ?
-		_null_coalesce(_match_prefix_regex(string, regex, string_pos, regex_pos+1),
+		_null_coalesce(_match_prefix_regex(string, regex, string_pos, 
+					regex_pos+1, 
+					ignore_case=ignore_case),
 				string_pos)
 
 	//CONCATENATION
 	: regex[regex_pos] == "&" ?	
 		_match_prefix_regex(string, regex, 
-			_match_prefix_regex(string, regex, string_pos, regex_pos+1), 
-			_match_prefix(regex, "\\*+?", "|&", regex_pos+1))
+			_match_prefix_regex(string, regex, string_pos, 
+				regex_pos+1, 
+				ignore_case=ignore_case), 
+			_match_prefix(regex, "\\*+?", "|&", regex_pos+1), 
+			ignore_case=ignore_case)
 			
 	//ESCAPE CHARACTER
 	: regex[regex_pos] == "\\"?
@@ -366,7 +390,7 @@ function _match_prefix_regex(string, regex, string_pos, regex_pos=0)=
 				undef
 
 	//LITERAL
-	: string[string_pos] == regex[regex_pos] ?
+	: equals(string[string_pos], regex[regex_pos], ignore_case=ignore_case) ?
 		string_pos+1
 
 	//WILDCARD
@@ -492,6 +516,13 @@ function _is_in(char, string, index=0) =
 		true
 	:
 		_is_in(char, string, index+1)
+	;
+
+function equals(this, that, ignore_case=false) =
+	ignore_case?
+		lower(this) == lower(that)
+	:
+		this==that
 	;
 
 function lower(string) = 
@@ -623,5 +654,4 @@ function _coalesce_on(value, error, fallback) =
 		value
 	;
 	
-
 
