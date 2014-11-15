@@ -13,11 +13,20 @@ echo([
 	"regex:",
 	contains("foo bar baz", "ba[rz]", regex=true) == true,
 	contains("foo bar baz", "spam", regex=true) == false,
-	find("foo bar baz", "ba[rz]", regex=true),
-	find("foo bar baz", "ba[rz]", 1, regex=true),
-	grep("foo bar baz", "ba[rz]", regex=true),
-	grep("foo bar baz", "ba[rz]", 1, regex=true),
-	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d", regex=true), 
+	find("foo bar baz", "ba[rz]", regex=true) == [4,7],
+	find("foo bar baz", "ba[rz]", 1, regex=true) == [8,11],
+	grep("foo bar baz", "ba[rz]", regex=true) == "bar",
+	grep("foo bar baz", "ba[rz]", 1, regex=true) == "baz",
+	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d", regex=true) == "867-5309", 
+	replace("foo bar baz", "ba[rz]", "spam", regex=true) == "foo spam spam",
+	
+	contains("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == true,
+	contains("foo bar baz", "SPAM", regex=true, ignore_case=true) == false,
+	find("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == [4,7],
+	find("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == [8,11],
+	grep("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == "bar",
+	grep("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == "baz",
+	replace("foo bar baz", "BA[RZ]", "spam", regex=true, ignore_case=true) == "foo spam spam",
 ]);
 echo([
 	"match_regex:",
@@ -28,7 +37,10 @@ echo([
 	_match_prefix_regex("foooobazfoobarbaz", "+&f&+o&?&b&ar&b&az", 0, 0) == 17,
 	_match_regex("foooobazfoobarbaz", "(fo+(bar)?baz)+") == 17,
 	
-	_explicitize_regex_alternation("(give me (f[aeiou]+|dabajabaza!))+", 0),
+	_match_prefix_regex("foooobazfoobarbaz", "+&F&+O&?&B&AR&B&AZ", 0, 0, ignore_case=true) == 17,
+	_match_regex("foooobazfoobarbaz", "(FO+(BAR)?BAZ)+", ignore_case=true) == 17,
+	
+	_explicitize_regex_alternation("(give me (f[aeiou]+|dabajabaza!))+", 0) == "(give me (f(a|e|i|o|u)+|dabajabaza!))+",
 	_explicitize_regex_concatenation("(give me (f(a|e|i|o|u)+|dabajabaza!))+", 0) == "(g&i&v&e& &m&e& &(f&(a|e|i|o|u)+|d&a&b&a&j&a&b&a&z&a&!))+",
 	_match_regex("give me foo give me fie give me dabajabaza!", "(give me (f[aeiou]+ |dabajabaza!))+") == 43,
 ]);
@@ -84,8 +96,8 @@ echo([
 	_infix_to_postfix("((())", _regex_ops),
 	_infix_to_postfix("a?*+", _regex_ops),
 	//edge cases
-	_infix_to_postfix("a", _regex_ops),
-	_infix_to_postfix("", _regex_ops),
+	_infix_to_postfix("a", _regex_ops) == "a",
+	_infix_to_postfix("", _regex_ops) == "",
 	_infix_to_postfix(undef, _regex_ops) == undef,
 	_infix_to_postfix("foo", undef) == undef,
 	_infix_to_postfix("\\d?|b*&\\d+", _regex_ops) == "d\\?b*d\\+&|",
@@ -171,6 +183,43 @@ echo([
 	_match_prefix_regex("f", "f", 0, 0)==1,
 	_match_prefix_regex(undef, "f", 0, 0)==undef,
 	_match_prefix_regex("f", undef, 0, 0)==undef,
+	
+	//IGNORE CASE
+	_match_prefix_regex("FOO", "f", 0, 0, ignore_case=true) == 1,
+	//concatenation
+	_match_prefix_regex("FOO", "&fo", 0, 0, ignore_case=true) == 2,
+	_match_prefix_regex("FOO", "&fx", 0, 0, ignore_case=true) == undef,
+	_match_prefix_regex("FOO", "&xf", 0, 0, ignore_case=true) == undef,
+	_match_prefix_regex("FOO", "&xy", 0, 0, ignore_case=true) == undef,
+	//union
+	_match_prefix_regex("FOO", "|fx", 0, 0, ignore_case=true) == 1,
+	_match_prefix_regex("FOO", "|xf", 0, 0, ignore_case=true) == 1,
+	_match_prefix_regex("FOO", "|xy", 0, 0, ignore_case=true) == undef,
+	//option
+	_match_prefix_regex("FOO", "?x", 0, 0, ignore_case=true) == 0,
+	_match_prefix_regex("FOO", "?f", 0, 0, ignore_case=true) == 1,
+	//kleene star
+	_match_prefix_regex("f", "*o", 0, 0, ignore_case=true) == 0,
+	_match_prefix_regex("OF", "*o", 0, 0, ignore_case=true) == 1,
+	_match_prefix_regex("OOF", "*o", 0, 0, ignore_case=true) == 2,
+	_match_prefix_regex("oof", "&*of", 0, 0, ignore_case=true) == 3,
+	//kleene plus
+	_match_prefix_regex("F", "+o", 0, 0, ignore_case=true) == undef,
+	_match_prefix_regex("OF", "+o", 0, 0, ignore_case=true) == 1,
+	_match_prefix_regex("OOF", "+o", 0, 0, ignore_case=true) == 2,
+	_match_prefix_regex("OOF", "&+of", 0, 0, ignore_case=true) == 3,
+	//wildcard
+	_match_prefix_regex("FOO", ".", 0, 0, ignore_case=true) == 1,
+	_match_prefix_regex("F", "+.", 0, 0, ignore_case=true)==1,
+	//anchor
+	_match_prefix_regex("FOO", "&^&fo", 0, 0, ignore_case=true) == 2,
+	_match_prefix_regex(" FOO", "&^&fo", 1, 0, ignore_case=true) == undef,
+	_match_prefix_regex("FOO", "&f&o&o$", 0, 0, ignore_case=true) == 3,
+	_match_prefix_regex("FOO ", "&f&o&o$", 0, 0, ignore_case=true) == undef,
+	//edge cases
+	_match_prefix_regex("F", "f", 0, 0, ignore_case=true)==1,
+	_match_prefix_regex(undef, "f", 0, 0, ignore_case=true)==undef,
+	_match_prefix_regex("F", undef, 0, 0, ignore_case=true)==undef,
 ]);
 
 echo([
@@ -212,6 +261,14 @@ echo([	"trim:",
 	trim(undef) == undef,
 ]);
 
+	
+echo(["replace", 	
+	replace("foobar", "oo", "ee") == "feebar",
+	replace("foobar foobar", "oo", "ee") == "feebar feebar",
+	replace("foobar", "OO", "ee", ignore_case=true) == "feebar",
+	replace("foobar foobar", "OO", "ee", ignore_case=true) == "feebar feebar",
+]);
+	
 echo([	"split:",
 	split("", " ", 0) == "",
 	split(test, " ", -1) == undef,
@@ -224,7 +281,7 @@ echo([	"split:",
 	split("foo", " ") == "foo",
 	]);
 	
-*echo(["find", 	
+echo(["find", 	
 	find("foobar", "o") == 1,
 	find("foobar", "o", 1) == 2,
 	find("foobar", "o", -1) == undef,
