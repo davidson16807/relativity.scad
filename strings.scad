@@ -17,7 +17,7 @@ _regex_ops = "\\?*+&|";
 
 
 function grep(string, pattern, index=0, ignore_case=false) = 		//string
-	_between_range(string, _find_regex(string, pattern, index, ignore_case=ignore_case));
+	_between_range(string, _index_of_regex(string, pattern, index, ignore_case=ignore_case));
 
 
 
@@ -31,9 +31,9 @@ function replace(string, replaced, replacement, ignore_case=false, regex=false) 
 	: pos >= len(string)?
 		""
 	: contains(string, replaced, ignore_case=ignore_case)?
-		str(	before(string, find(string, replaced, ignore_case=ignore_case)),
+		str(	before(string, index_of(string, replaced, ignore_case=ignore_case)),
 			replacement,
-			replace(after(string, find(string, replaced, ignore_case=ignore_case)+len(replaced)-1), 
+			replace(after(string, index_of(string, replaced, ignore_case=ignore_case)+len(replaced)-1), 
 				replaced, replacement, ignore_case=ignore_case)
 		)
 	: 
@@ -46,7 +46,7 @@ function _replace_regex(string, pattern, replacement, ignore_case=false) = 	//st
 		""
 	: 
 		_replace_between_range(string, pattern, replacement, 
-			_find_regex(string, pattern, ignore_case=ignore_case),
+			_index_of_regex(string, pattern, ignore_case=ignore_case),
 			ignore_case = ignore_case
 		)
 	;
@@ -71,19 +71,19 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 	: index < 0?
 		undef
 	: index == 0?
-		between(string, 0, find(string, seperator, index, ignore_case=ignore_case))
+		between(string, 0, index_of(string, seperator, index, ignore_case=ignore_case))
 	:
 		between(string, 
-			_null_coalesce(find(string, seperator, index-1, ignore_case=ignore_case)+len(seperator), len(string)+1), 
-			_null_coalesce(find(string, seperator, index, ignore_case=ignore_case), 		 len(string)+1)) 
+			_null_coalesce(index_of(string, seperator, index-1, ignore_case=ignore_case)+len(seperator), len(string)+1), 
+			_null_coalesce(index_of(string, seperator, index, ignore_case=ignore_case), 		 len(string)+1)) 
 	;
 //function _split_regex(string, pattern, index) =		//string	
 //	index <= 0?
-//		before(string, 0, _find_regex(string, pattern, index).x)
+//		before(string, 0, _index_of_regex(string, pattern, index).x)
 //	:
 //		between(string, 
-//			_find_regex(string, pattern, index).y, 
-//			_find_regex(string, pattern, index+1).x);
+//			_index_of_regex(string, pattern, index).y, 
+//			_index_of_regex(string, pattern, index+1).x);
 
 
 
@@ -92,28 +92,28 @@ function contains(string, substring, ignore_case=false, regex=false) =
 	regex?
 		_contains_regex(string, substring, ignore_case=ignore_case)
 	:
-		find(string, substring, ignore_case=ignore_case) != undef
+		index_of(string, substring, ignore_case=ignore_case) != undef
 	; 
 function _contains_regex(string, pattern, ignore_case=false) = 			//bool		
-	_find_regex(string, pattern, ignore_case=ignore_case) != undef;
+	_index_of_regex(string, pattern, ignore_case=ignore_case) != undef;
 	
 
 
 
-function find(string, goal, index=0, pos=0, ignore_case=false, regex=false) = 
+function index_of(string, goal, index=0, pos=0, ignore_case=false, regex=false) = 
 	regex?
-		_find_regex(string, goal, index, ignore_case=ignore_case)
+		_index_of_regex(string, goal, index, ignore_case=ignore_case)
 	: len(goal) == 1 && !ignore_case?
 		search(goal, after(string, pos), 0)[0][index] + pos + 1
 	: index <= 0?
-		_find_first(string, goal, pos, ignore_case=ignore_case)
+		_index_of_first(string, goal, pos, ignore_case=ignore_case)
 	: 
-		find(string, goal, index-1, 
-			pos = _find_first(string, goal, ignore_case=ignore_case) + len(goal),
+		index_of(string, goal, index-1, 
+			pos = _index_of_first(string, goal, ignore_case=ignore_case) + len(goal),
 			ignore_case=ignore_case)
 	;
 
-function _find_first(string, goal, pos=0, ignore_case=false, regex=false) = 
+function _index_of_first(string, goal, pos=0, ignore_case=false, regex=false) = 
 	string == undef?
 		undef
 	: goal == undef?
@@ -125,23 +125,23 @@ function _find_first(string, goal, pos=0, ignore_case=false, regex=false) =
 	: starts_with(string, goal, pos, ignore_case=ignore_case)?
 		pos
 	:
-		_find_first(string, goal, pos+1, ignore_case=ignore_case)
+		_index_of_first(string, goal, pos+1, ignore_case=ignore_case)
 	;
-function _find_regex(string, pattern, index=0, pos=0, ignore_case=false) = 		//[start,end]
+function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 		//[start,end]
 	index == 0?
-		_find_first_regex(string, pattern, pos, ignore_case=ignore_case)
+		_index_of_first_regex(string, pattern, pos, ignore_case=ignore_case)
 	:
-		_find_regex(string, pattern, 
+		_index_of_regex(string, pattern, 
 			index = index-1,
-			pos = _find_first_regex(string, pattern, pos, ignore_case=ignore_case).y + 1,
+			pos = _index_of_first_regex(string, pattern, pos, ignore_case=ignore_case).y + 1,
 			ignore_case=ignore_case)
 	;
-function _find_first_regex(string, pattern, pos=0, ignore_case=false) =
+function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
 	pos >= len(string)?
 		undef
 	: _coalesce_on([pos, _match_regex(string, pattern, pos, ignore_case=ignore_case)], 
 		[pos, undef],
-		_find_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
+		_index_of_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
 
 
 
@@ -654,4 +654,3 @@ function _coalesce_on(value, error, fallback) =
 		value
 	;
 	
-
