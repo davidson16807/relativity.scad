@@ -17,7 +17,7 @@ _regex_ops = "\\?*+&|";
 
 
 function grep(string, pattern, index=0, ignore_case=false) = 		//string
-	_between_range(string, _index_of_regex(string, pattern, index, ignore_case=ignore_case));
+	_between_range(string, _index_of_regex(string, _compile_regex(pattern), index, ignore_case=ignore_case));
 
 
 
@@ -25,7 +25,7 @@ function grep(string, pattern, index=0, ignore_case=false) = 		//string
 
 function replace(string, replaced, replacement, ignore_case=false, regex=false) = 	//string
 	regex?
-		_replace_regex(string, replaced, replacement, ignore_case=ignore_case)
+		_replace_regex(string, _compile_regex(replaced), replacement, ignore_case=ignore_case)
 	: string == undef?
 		undef
 	: pos >= len(string)?
@@ -90,7 +90,7 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 
 function contains(string, substring, ignore_case=false, regex=false) = 
 	regex?
-		_contains_regex(string, substring, ignore_case=ignore_case)
+		_contains_regex(string, _compile_regex(substring), ignore_case=ignore_case)
 	:
 		index_of(string, substring, ignore_case=ignore_case) != undef
 	; 
@@ -100,32 +100,32 @@ function _contains_regex(string, pattern, ignore_case=false) = 			//bool
 
 
 
-function index_of(string, goal, index=0, pos=0, ignore_case=false, regex=false) = 
+function index_of(string, pattern, index=0, pos=0, ignore_case=false, regex=false) = 
 	regex?
-		_index_of_regex(string, goal, index, ignore_case=ignore_case)
-	: len(goal) == 1 && !ignore_case?
-		search(goal, after(string, pos), 0)[0][index] + pos + 1
+		_index_of_regex(string, _compile_regex(pattern), index, ignore_case=ignore_case)
+	: len(pattern) == 1 && !ignore_case?
+		search(pattern, after(string, pos), 0)[0][index] + pos + 1
 	: index <= 0?
-		_index_of_first(string, goal, pos, ignore_case=ignore_case)
+		_index_of_first(string, pattern, pos, ignore_case=ignore_case)
 	: 
-		index_of(string, goal, index-1, 
-			pos = _index_of_first(string, goal, ignore_case=ignore_case) + len(goal),
+		index_of(string, pattern, index-1, 
+			pos = _index_of_first(string, pattern, ignore_case=ignore_case) + len(pattern),
 			ignore_case=ignore_case)
 	;
 
-function _index_of_first(string, goal, pos=0, ignore_case=false, regex=false) = 
+function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false) = 
 	string == undef?
 		undef
-	: goal == undef?
+	: pattern == undef?
 		undef
 	: pos < 0 || pos == undef?
 		undef
 	: pos >= len(string)?
 		undef
-	: starts_with(string, goal, pos, ignore_case=ignore_case)?
+	: starts_with(string, pattern, pos, ignore_case=ignore_case)?
 		pos
 	:
-		_index_of_first(string, goal, pos+1, ignore_case=ignore_case)
+		_index_of_first(string, pattern, pos+1, ignore_case=ignore_case)
 	;
 function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 		//[start,end]
 	index == 0?
@@ -139,7 +139,7 @@ function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 	
 function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
 	pos >= len(string)?
 		undef
-	: _coalesce_on([pos, _match_regex(string, pattern, pos, ignore_case=ignore_case)], 
+	: _coalesce_on([pos, _match_prefix_regex(string, pattern, pos, ignore_case=ignore_case)], 
 		[pos, undef],
 		_index_of_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
 
@@ -147,11 +147,14 @@ function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
 
 
 
-function starts_with(string, start, index=0, ignore_case=false, regex=false) = 
+function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
 	regex?
-		_match_regex(string, start, index) != undef
+		_match_prefix_regex(string,
+			_compile_regex(start), 
+			pos, 
+			ignore_case=ignore_case) != undef
 	:
-		equals(	substring(string, index, len(start)), 
+		equals(	substring(string, pos, len(start)), 
 			start, 
 			ignore_case=ignore_case)
 	;
@@ -170,7 +173,7 @@ function ends_with(string, end, ignore_case=false) =
 function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 	_match_prefix_regex(string,
 		_compile_regex(pattern), 
-		pos, 0,
+		pos, 
 		ignore_case=ignore_case);
 
 function _compile_regex(regex) = 
