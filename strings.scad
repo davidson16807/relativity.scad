@@ -6,8 +6,6 @@ _alphanumeric = str(_letter, _digit);
 _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
 
-test = "foo  (1, bar2)";
-regex_test = "foooobazfoobarbaz";
 _regex_ops = "\\?*+&|";
 
 
@@ -65,8 +63,10 @@ function _replace_between_range(string, pattern, replacement, range, ignore_case
 
 
 
-function split(string, seperator=" ", index=0, ignore_case = false) = 
-	!contains(string, seperator, ignore_case=ignore_case) ?
+function split(string, seperator=" ", index=0, ignore_case = false, regex=false) = 
+	regex?
+		_split_regex(string, _compile_regex(seperator), index, ignore_case=ignore_case)
+	: !contains(string, seperator, ignore_case=ignore_case) ?
 		string
 	: index < 0?
 		undef
@@ -77,13 +77,15 @@ function split(string, seperator=" ", index=0, ignore_case = false) =
 			_null_coalesce(index_of(string, seperator, index-1, ignore_case=ignore_case)+len(seperator), len(string)+1), 
 			_null_coalesce(index_of(string, seperator, index, ignore_case=ignore_case), 		 len(string)+1)) 
 	;
-//function _split_regex(string, pattern, index) =		//string	
-//	index <= 0?
-//		before(string, 0, _index_of_regex(string, pattern, index).x)
-//	:
-//		between(string, 
-//			_index_of_regex(string, pattern, index).y, 
-//			_index_of_regex(string, pattern, index+1).x);
+function _split_regex(string, pattern, index, pos=0, ignore_case=false) =
+	index <= 0?
+		between(string, pos, _index_of_regex(string, pattern, index=0, pos=pos, ignore_case=ignore_case).x)
+	:
+		_split_regex(string, pattern, 
+			index-1, 
+			_index_of_regex(string, pattern, index, 	nore_case=ignore_case).y, 
+			ignore_case=ignore_case)
+	;
 
 
 
@@ -133,7 +135,7 @@ function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 	
 	:
 		_index_of_regex(string, pattern, 
 			index = index-1,
-			pos = _index_of_first_regex(string, pattern, pos, ignore_case=ignore_case).y + 1,
+			pos = _index_of_first_regex(string, pattern, index=0, pos=pos, ignore_case=ignore_case).y,
 			ignore_case=ignore_case)
 	;
 function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
@@ -592,7 +594,7 @@ function between(string, start, end) =
 		before(string, end)
 	: end == undef?
 		undef
-	: end <= 0?
+	: end < 0?
 		undef
 	: end > len(string)?
 		after(string, start-1)
