@@ -79,11 +79,12 @@ function split(string, seperator=" ", index=0, ignore_case = false, regex=false)
 	;
 function _split_regex(string, pattern, index, pos=0, ignore_case=false) =
 	index <= 0?
-		between(string, pos, _index_of_regex(string, pattern, index=0, pos=pos, ignore_case=ignore_case).x)
+		between(string, pos, 
+			_null_coalesce(_index_of_regex(string, pattern, index=0, pos=pos, ignore_case=ignore_case).x, len(string)+1))
 	:
 		_split_regex(string, pattern, 
 			index-1, 
-			_index_of_regex(string, pattern, index, 	nore_case=ignore_case).y, 
+			_null_coalesce(_index_of_first_regex(string, pattern, pos=pos, ignore_case=ignore_case).y, len(string)+1), 
 			ignore_case=ignore_case)
 	;
 
