@@ -1,5 +1,8 @@
 include <strings.scad>
 
+test = "foo  (1, bar2)";
+regex_test = "foooobazfoobarbaz";
+
 function all(booleans, index=0) = 
 	index >= len(booleans)?
 		true
@@ -9,7 +12,7 @@ function all(booleans, index=0) =
 		all(booleans, index+1)
 	;
 	
-echo([
+*echo([
 	"regex:",
 	contains("foo bar baz", "ba[rz]", regex=true) == true,
 	contains("foo bar baz", "spam", regex=true) == false,
@@ -19,6 +22,16 @@ echo([
 	grep("foo bar baz", "ba[rz]", 1, regex=true) == "baz",
 	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d", regex=true) == "867-5309", 
 	replace("foo bar baz", "ba[rz]", "spam", regex=true) == "foo spam spam",
+	split(regex_test, "fo+", 0, regex=true) == "",
+	split(regex_test, "fo+", 1, regex=true) == "baz",
+	split(regex_test, "fo+", 2, regex=true) == "barbaz",
+	split(regex_test, "fo+", 3, regex=true) == undef,
+	split("bazfoobar", "fo+", 0, regex=true),
+	split("bazfoobar", "fo+", 1, regex=true),
+	split("bazfoobar", "fo+", 2, regex=true),
+	split("bazfoobar", "fo+", 3, regex=true),
+	split("", "fo+", 0, regex=true) == "",
+	split("", "fo+", 1, regex=true) == undef,
 	
 	contains("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == true,
 	contains("foo bar baz", "SPAM", regex=true, ignore_case=true) == false,
@@ -27,6 +40,10 @@ echo([
 	grep("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == "bar",
 	grep("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == "baz",
 	replace("foo bar baz", "BA[RZ]", "spam", regex=true, ignore_case=true) == "foo spam spam",
+	split(regex_test, "FO+", 0, regex=true, ignore_case=true) == "",
+	split(regex_test, "FO+", 1, regex=true, ignore_case=true) == "baz",
+	split(regex_test, "FO+", 2, regex=true, ignore_case=true) == "barbaz",
+	split(regex_test, "FO+", 3, regex=true, ignore_case=true) == undef,
 ]);
 echo([
 	"match_regex:",
@@ -144,78 +161,143 @@ echo([
 ]);
 
 echo([
+	"_prefix_to_tree:",
+	_prefix_to_tree("", "", "") == undef
+]);
+
+echo([
+	"_match_regex_tree:",
+	"literals",
+	//literals
+	_match_regex_tree("foo", "f", 0) == 1,
+	_match_regex_tree("f", "f", 0) == 1,
+	_match_regex_tree("foo", "&fo", 0) == 2,
+	_match_regex_tree("foo", "&fx", 0) == undef,
+	_match_regex_tree("foo", "&xf", 0) == undef,
+	_match_regex_tree("foo", "&xy", 0) == undef,
+	_match_regex_tree("foo", "|fx", 0) == 1,
+	_match_regex_tree("foo", "|xf", 0) == 1,
+	_match_regex_tree("foo", "|xy", 0) == undef,
+	_match_regex_tree("foo", "?x", 0) == 0,
+	_match_regex_tree("foo", "?f", 0) == 1,
+	_match_regex_tree("f", "*o", 0) == 0,
+	_match_regex_tree("of", "*o", 0) == 1,
+	_match_regex_tree("oof", "*o", 0) == 2,
+	_match_regex_tree("oof", ["&","*o","f"], 0) == 3,
+	_match_regex_tree("oooofaa", ["&","*o","f"], 0) == 5,
+	_match_regex_tree("f", "+o", 0) == undef,
+	_match_regex_tree("of", "+o", 0) == 1,
+	_match_regex_tree("oof", "+o", 0) == 2,
+	_match_regex_tree("oof", ["&","+o","f"], 0) == 3,
+	_match_regex_tree("oooofaa", ["&","+o","f"], 0) == 5,
+	"wildcard",
+	//wildcard
+	_match_regex_tree("FOO", ".", 0, 0, ignore_case=true) == 1,
+	_match_regex_tree("F", "+.", 0, 0, ignore_case=true)==1,
+	"anchor",
+	//anchor
+	_match_regex_tree("FOO", ["&", "^", "&fo"], 0, 0, ignore_case=true) == 2,
+	_match_regex_tree(" FOO", ["&", "^", "&fo"], 1, 0, ignore_case=true) == undef,
+	_match_regex_tree("FOO", ["&", "f", ["&", "o", "&o$"]], 0, 0, ignore_case=true) == 3,
+	_match_regex_tree("FOO ", ["&", "f", ["&", "o", "&o$"]], 0, 0, ignore_case=true) == undef,
+	"edge cases",
+	//edge cases
+	_match_prefix_regex("F", "f", 0, 0, ignore_case=true)==1,
+	_match_prefix_regex(undef, "f", 0, 0, ignore_case=true)==undef,
+	_match_prefix_regex("F", undef, 0, 0, ignore_case=true)==undef,
+	
+]);
+*echo([
 	"_match_prefix_regex:",
+	"literals",
 	//literals
 	_match_prefix_regex("foo", "f", 0, 0) == 1,
+	"concatenation",
 	//concatenation
 	_match_prefix_regex("foo", "&fo", 0, 0) == 2,
 	_match_prefix_regex("foo", "&fx", 0, 0) == undef,
 	_match_prefix_regex("foo", "&xf", 0, 0) == undef,
 	_match_prefix_regex("foo", "&xy", 0, 0) == undef,
+	"union",
 	//union
 	_match_prefix_regex("foo", "|fx", 0, 0) == 1,
 	_match_prefix_regex("foo", "|xf", 0, 0) == 1,
 	_match_prefix_regex("foo", "|xy", 0, 0) == undef,
+	"option",
 	//option
 	_match_prefix_regex("foo", "?x", 0, 0) == 0,
 	_match_prefix_regex("foo", "?f", 0, 0) == 1,
+	"kleene star",
 	//kleene star
 	_match_prefix_regex("f", "*o", 0, 0) == 0,
 	_match_prefix_regex("of", "*o", 0, 0) == 1,
 	_match_prefix_regex("oof", "*o", 0, 0) == 2,
 	_match_prefix_regex("oof", "&*of", 0, 0) == 3,
 	_match_prefix_regex("oooofaa", "&*of", 0, 0) == 5,
+	"kleene plus",
 	//kleene plus
 	_match_prefix_regex("f", "+o", 0, 0) == undef,
 	_match_prefix_regex("of", "+o", 0, 0) == 1,
 	_match_prefix_regex("oof", "+o", 0, 0) == 2,
 	_match_prefix_regex("oof", "&+of", 0, 0) == 3,
 	_match_prefix_regex("oooofaa", "&+of", 0, 0) == 5,
+	"wildcard",
 	//wildcard
 	_match_prefix_regex("foo", ".", 0, 0) == 1,
 	_match_prefix_regex("f", "+.", 0, 0)==1,
+	"anchor",
 	//anchor
-	_match_prefix_regex("foo", "&^&fo", 0, 0) == 2,
+	_match_prefix_regex("foo", "&^&fo", 0, 0),
 	_match_prefix_regex(" foo", "&^&fo", 1, 0) == undef,
-	_match_prefix_regex("foo", "&f&o&o$", 0, 0) == 3,
+	_match_prefix_regex("foo", "&f&o&o$", 0, 0),
 	_match_prefix_regex("foo ", "&f&o&o$", 0, 0) == undef,
+	"edge cases",
 	//edge cases
 	_match_prefix_regex("f", "f", 0, 0)==1,
 	_match_prefix_regex(undef, "f", 0, 0)==undef,
 	_match_prefix_regex("f", undef, 0, 0)==undef,
 	
+	"IGNORE CASE",
 	//IGNORE CASE
 	_match_prefix_regex("FOO", "f", 0, 0, ignore_case=true) == 1,
+	"concatenation",
 	//concatenation
 	_match_prefix_regex("FOO", "&fo", 0, 0, ignore_case=true) == 2,
 	_match_prefix_regex("FOO", "&fx", 0, 0, ignore_case=true) == undef,
 	_match_prefix_regex("FOO", "&xf", 0, 0, ignore_case=true) == undef,
 	_match_prefix_regex("FOO", "&xy", 0, 0, ignore_case=true) == undef,
+	"union",
 	//union
 	_match_prefix_regex("FOO", "|fx", 0, 0, ignore_case=true) == 1,
 	_match_prefix_regex("FOO", "|xf", 0, 0, ignore_case=true) == 1,
 	_match_prefix_regex("FOO", "|xy", 0, 0, ignore_case=true) == undef,
+	"option",
 	//option
 	_match_prefix_regex("FOO", "?x", 0, 0, ignore_case=true) == 0,
 	_match_prefix_regex("FOO", "?f", 0, 0, ignore_case=true) == 1,
+	"kleene star",
 	//kleene star
 	_match_prefix_regex("f", "*o", 0, 0, ignore_case=true) == 0,
 	_match_prefix_regex("OF", "*o", 0, 0, ignore_case=true) == 1,
 	_match_prefix_regex("OOF", "*o", 0, 0, ignore_case=true) == 2,
 	_match_prefix_regex("oof", "&*of", 0, 0, ignore_case=true) == 3,
+	"kleene plus",
 	//kleene plus
 	_match_prefix_regex("F", "+o", 0, 0, ignore_case=true) == undef,
 	_match_prefix_regex("OF", "+o", 0, 0, ignore_case=true) == 1,
 	_match_prefix_regex("OOF", "+o", 0, 0, ignore_case=true) == 2,
 	_match_prefix_regex("OOF", "&+of", 0, 0, ignore_case=true) == 3,
+	"wildcard",
 	//wildcard
 	_match_prefix_regex("FOO", ".", 0, 0, ignore_case=true) == 1,
 	_match_prefix_regex("F", "+.", 0, 0, ignore_case=true)==1,
+	"anchor",
 	//anchor
 	_match_prefix_regex("FOO", "&^&fo", 0, 0, ignore_case=true) == 2,
 	_match_prefix_regex(" FOO", "&^&fo", 1, 0, ignore_case=true) == undef,
 	_match_prefix_regex("FOO", "&f&o&o$", 0, 0, ignore_case=true) == 3,
 	_match_prefix_regex("FOO ", "&f&o&o$", 0, 0, ignore_case=true) == undef,
+	"edge cases",
 	//edge cases
 	_match_prefix_regex("F", "f", 0, 0, ignore_case=true)==1,
 	_match_prefix_regex(undef, "f", 0, 0, ignore_case=true)==undef,
@@ -225,6 +307,13 @@ echo([
 echo([
 	"_match_prefix",
 	_match_prefix("++1+1++11+111", "", "+", 0) == 13,
+	_match_prefix("&^&fo", "\\?*+", "&|", 0),
+	_match_prefix("&^&fo", "\\?*+", "&|", 1),
+	_match_prefix("&^&fo", "\\?*+", "&|", 2),
+	_match_prefix("&^&fo", "\\?*+", "&|", 3),
+	_match_prefix("&^&fo", "\\?*+", "&|", 4),
+	_match_prefix("&^&fo", "\\?*+", "&|", 5),
+	_match_prefix("&^&fo", "\\?*+", "&|", 6),
 ]);
 
 echo([	"token:",
@@ -279,7 +368,7 @@ echo([	"split:",
 	split(test, " ", 4) == undef,
 	split(test, " ", 5) == undef,
 	split("foo", " ") == "foo",
-	]);
+]);
 	
 echo(["index_of", 	
 	index_of("foobar", "o") == 1,
