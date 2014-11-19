@@ -223,7 +223,7 @@ function _explicitize_regex_concatenation(regex, stack="", i=0) =
 		str(regex[i], 		_explicitize_regex_concatenation(regex, stack, i+1))
 	;
 //converts infix to postfix using shunting yard algorithm
-function _infix_to_postfix(infix, ops, stack=[], i=0) = 
+function _infix_to_postfix(infix, ops, op_stack=[], in_stack=[], i=0) = 
 	infix == undef?
 		undef
 	: ops == undef?
@@ -231,59 +231,83 @@ function _infix_to_postfix(infix, ops, stack=[], i=0) =
 	: i == undef?
 		undef
 	: i >= len(infix)?
-		len(stack) <= 0?
-			""
+		len(op_stack) <= 0?
+			in_stack[0]
 		:
-			str(stack[0], 	_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i))
+			_infix_to_postfix(infix, ops, 
+				_pop(op_stack), 
+				_push(in_stack[1][1], str(_null_coalesce(in_stack[1][0], ""), in_stack[0], op_stack[0])),
+				i=i)
 	: _is_in(infix[i], ops)?
-		stack[0] == "(" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
-			str(		_infix_to_postfix(infix, ops, stack=_push(stack, infix[i]), 	i=i+1))
+		op_stack[0] == "(" || 
+		len(op_stack) <= 0 || 
+		_precedence(infix[i], ops) < _precedence(op_stack[0], ops)?
+			_infix_to_postfix(infix, ops, 
+				_push(op_stack, infix[i]), 
+				in_stack,
+				i=i+1)
 		:
-			str(stack[0], 	_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i))
+			_infix_to_postfix(infix, ops, 
+				_pop(op_stack), 
+				_push(in_stack[1][1], str(_null_coalesce(in_stack[1][0], ""), in_stack[0], op_stack[0])),
+				i=i)
 	: infix[i] == "("?
-			str(		_infix_to_postfix(infix, ops, stack=_push(stack, infix[i]), 	i=i+1))
+			_infix_to_postfix(infix, ops, 
+				_push(op_stack, infix[i]), 
+				in_stack,
+				i=i+1)
 	: infix[i] == ")"?
-		stack[0] == "(" ?
-			str(		_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i+1))
-		: len(stack) <= 0 ?
-			str(		_infix_to_postfix(infix, ops, stack=stack,			i=i+1))
+		op_stack[0] == "(" ?
+			_infix_to_postfix(infix, ops, 
+				_pop(op_stack), 
+				in_stack,
+				i=i+1)
+		: len(op_stack) <= 0 ?
+			_infix_to_postfix(infix, ops, 
+				op_stack, 
+				in_stack,
+				i=i+1)
 		: 
-			str(stack[0], 	_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i))
+			_infix_to_postfix(infix, ops, 
+				_pop(op_stack), 
+				_push(in_stack[1][1], str(_null_coalesce(in_stack[1][0], ""), in_stack[0], op_stack[0])),
+				i=i)
 	:
-			str(infix[i], 	_infix_to_postfix(infix, ops, stack=stack, 			i=i+1))
+			_infix_to_postfix(infix, ops, 
+				op_stack, 
+				_push(in_stack, infix[i]),
+				i=i+1)
 	;
-
 //converts infix to prefix using shunting yard algorithm
-function _infix_to_prefix(infix, ops, stack=[], i=undef) = 
+function _infix_to_prefix(infix, ops, op_stack=[], in_stack=[], i=undef) = 
 	infix == undef?
 		undef
 	: ops == undef?
 		undef
 	: i == undef?
-		_infix_to_prefix(infix, ops, stack, i=len(infix)-1)
+		_infix_to_prefix(infix, ops, op_stack, i=len(infix)-1)
 	: i < 0?
-		len(stack) <= 0?
+		len(op_stack) <= 0?
 			""
 		:
-			str(_infix_to_prefix(infix, ops, stack=_pop(stack), 			i=i), stack[0])
+			str(_infix_to_prefix(infix, ops, _pop(op_stack), 			i=i), op_stack[0])
 	: _is_in(infix[i], ops)?
-		stack[0] == ")" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
-			str(_infix_to_prefix(infix, ops, stack=_push(stack, infix[i]), 	i=i-1))
+		op_stack[0] == ")" || len(op_stack) <= 0 || _precedence(infix[i], ops) < _precedence(op_stack[0], ops)?
+			str(_infix_to_prefix(infix, ops, _push(op_stack, infix[i]), 	i=i-1))
 		:
-			str(_infix_to_prefix(infix, ops, stack=_pop(stack), 			i=i), stack[0])
+			str(_infix_to_prefix(infix, ops, _pop(op_stack), 			i=i), op_stack[0])
 	: infix[i] == ")"?
-			str(_infix_to_prefix(infix, ops, stack=_push(stack, infix[i]), 	i=i-1))
+			str(_infix_to_prefix(infix, ops, _push(op_stack, infix[i]), 	i=i-1))
 	: infix[i] == "("?
-		stack[0] == ")" ?
-			str(_infix_to_prefix(infix, ops, stack=_pop(stack),			i=i-1))
-		: len(stack) <= 0 ?
-			str(_infix_to_prefix(infix, ops, stack=stack,				i=i-1))
+		op_stack[0] == ")" ?
+			str(_infix_to_prefix(infix, ops, _pop(op_stack),			i=i-1))
+		: len(op_stack) <= 0 ?
+			str(_infix_to_prefix(infix, ops, op_stack,				i=i-1))
 		: 
-			str(_infix_to_prefix(infix, ops, stack=_pop(stack),		 	i=i), stack[0])
+			str(_infix_to_prefix(infix, ops, _pop(op_stack),		 	i=i), op_stack[0])
 	:
-			str(_infix_to_prefix(infix, ops, stack=stack, 				i=i-1), infix[i])
+			str(_infix_to_prefix(infix, ops, op_stack, 				i=i-1), infix[i])
 	;
-	
 function _prefix_to_tree(prefix, unary, binary, pos=0) = 
 	prefix == undef?
 		undef
@@ -309,8 +333,12 @@ function _match_prefix(regex, unary, binary, pos=0) =
 		pos+1
 	;
 
-function _pop(stack) = 
-	len(stack) <=0? [] : stack[1];
+function _pop(stack, n=1) = 
+	n <= 1?
+		len(stack) <=0? [] : stack[1]
+	:
+		_pop(_pop(stack), n-1)
+	;
 function _push(stack, char) = 
 	[char, stack];
 
