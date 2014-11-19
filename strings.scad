@@ -223,7 +223,7 @@ function _explicitize_regex_concatenation(regex, stack="", i=0) =
 		str(regex[i], 		_explicitize_regex_concatenation(regex, stack, i+1))
 	;
 //converts infix to postfix using shunting yard algorithm
-function _infix_to_postfix(infix, ops, stack="", i=0) = 
+function _infix_to_postfix(infix, ops, stack=[], i=0) = 
 	infix == undef?
 		undef
 	: ops == undef?
@@ -231,7 +231,10 @@ function _infix_to_postfix(infix, ops, stack="", i=0) =
 	: i == undef?
 		undef
 	: i >= len(infix)?
-		stack
+		len(stack) <= 0?
+			""
+		:
+			str(stack[0], 	_infix_to_postfix(infix, ops, stack=_pop(stack),		i=i))
 	: _is_in(infix[i], ops)?
 		stack[0] == "(" || len(stack) <= 0 || _precedence(infix[i], ops) < _precedence(stack[0], ops)?
 			str(		_infix_to_postfix(infix, ops, stack=_push(stack, infix[i]), 	i=i+1))
