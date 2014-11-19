@@ -160,8 +160,16 @@ echo([
 
 echo([
 	"_prefix_to_tree:",
-	_prefix_to_tree("", "", "") == undef,
-	_prefix_to_tree("f", "", "") == undef
+	_prefix_to_tree("", "\\?*+", "&|") == undef,
+	_prefix_to_tree("f", "\\?*+", "&|") == "f",
+	_prefix_to_tree("\\f", "\\?*+", "&|") == ["\\","f"],
+	_prefix_to_tree("?f", "\\?*+", "&|") == ["?","f"],
+	_prefix_to_tree("*f", "\\?*+", "&|") == ["*","f"],
+	_prefix_to_tree("+f", "\\?*+", "&|") == ["+","f"],
+	_prefix_to_tree("&fo", "\\?*+", "&|") == ["&","f","o"],
+	_prefix_to_tree("&f*o", "\\?*+", "&|") == ["&","f",["*","o"]],
+	_prefix_to_tree("|fo", "\\?*+", "&|") == ["|","f","o"],
+	_prefix_to_tree("|f*o", "\\?*+", "&|") == ["|","f",["*","o"]],
 ]);
 
 echo([
