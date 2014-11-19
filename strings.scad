@@ -148,7 +148,7 @@ function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 	
 function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
 	pos >= len(string)?
 		undef
-	: _coalesce_on([pos, _match_prefix_regex(string, pattern, pos, ignore_case=ignore_case)], 
+	: _coalesce_on([pos, _match_regex_tree(string, pattern, pos, ignore_case=ignore_case)], 
 		[pos, undef],
 		_index_of_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
 
@@ -158,7 +158,7 @@ function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
 
 function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
 	regex?
-		_match_prefix_regex(string,
+		_match_regex_tree(string,
 			_compile_regex(start), 
 			pos, 
 			ignore_case=ignore_case) != undef
@@ -180,19 +180,21 @@ function ends_with(string, end, ignore_case=false) =
 
 
 function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
-	_match_prefix_regex(string,
+	_match_regex_tree(string,
 		_compile_regex(pattern), 
 		pos, 
 		ignore_case=ignore_case);
 
 function _compile_regex(regex) = 
+	_prefix_to_tree
 	(
 		_infix_to_prefix(
 			_explicitize_regex_concatenation(
 				_explicitize_regex_alternation(regex)
 			), 
 			_regex_ops
-		)
+		),
+		"\\*+?", "|&"
 	);
 
 function _explicitize_regex_alternation(regex, stack="", i=0) = 
@@ -290,6 +292,16 @@ function _prefix_to_tree(prefix, unary, binary, pos=0) =
 		prefix[pos]
 	;
 	
+function _match_prefix(regex, unary, binary, pos=0) = 
+	pos >= len(regex)?
+		len(regex)
+	: _is_in(regex[pos], unary)?
+		_match_prefix(regex, unary, binary, pos+1)
+	: _is_in(regex[pos], binary)?
+		_match_prefix(regex, unary, binary,  _match_prefix(regex, unary, binary, pos+1))
+	: 
+		pos+1
+	;
 
 function _pop(stack) = 
 	after(stack, 0);
@@ -408,150 +420,7 @@ function _match_regex_tree(string, regex, string_pos=0, ignore_case=false) =
 	: 
 		undef
 	;
-function _match_prefix_regex(string, regex, string_pos, regex_pos=0, ignore_case=false)=
-	//INVALID INPUT
-	string == undef?
-		undef
-	: regex == undef?
-		undef
 		
-	//regex length
-	: regex_pos == undef?
-		undef
-	: regex_pos >= len(regex)?
-		undef
-		
-	
-	//string length and anchors
-	: regex[regex_pos] == "^"?
-		string_pos == 0?
-			string_pos
-		:
-			undef
-	: regex[regex_pos] == "$"?
-		string_pos >= len(string)?
-			string_pos
-		:
-			undef
-	: string_pos == undef?
-		undef
-	: string_pos >= len(string)?
-		undef
-
-	//ALTERNATION
-	: regex[regex_pos] == "|" ?
-		_null_coalesce(
-			_match_prefix_regex(string, regex, string_pos, 
-				regex_pos+1, 
-				ignore_case=ignore_case),
-			_match_prefix_regex(string, regex, string_pos, 
-				_match_prefix(regex, "\\*+?", "|&", regex_pos+1), 
-				ignore_case=ignore_case)
-			)
-
-	//KLEENE STAR
-	: regex[regex_pos] == "*" ?
-		_null_coalesce(
-			_match_prefix_regex(string, regex,
-				_match_prefix_regex(string, regex, string_pos, 
-					regex_pos+1, 
-					ignore_case=ignore_case),
-				regex_pos, 
-				ignore_case=ignore_case),
-			string_pos)
-
-	//KLEENE PLUS
-	: regex[regex_pos] == "+" ?
-		_null_coalesce(
-			_match_prefix_regex(string, regex,
-				_match_prefix_regex(string, regex, string_pos, 
-					regex_pos+1, 
-					ignore_case=ignore_case),
-				regex_pos, 
-				ignore_case=ignore_case),
-			_match_prefix_regex(string, regex, string_pos, 
-				regex_pos+1, 
-				ignore_case=ignore_case)
-		)
-
-	//OPTION
-	: regex[regex_pos] == "?" ?
-		_null_coalesce(_match_prefix_regex(string, regex, string_pos, 
-					regex_pos+1, 
-					ignore_case=ignore_case),
-				string_pos)
-
-	//CONCATENATION
-	: regex[regex_pos] == "&" ?	
-		_match_prefix_regex(string, regex, 
-			_match_prefix_regex(string, regex, string_pos, 
-				regex_pos+1, 
-				ignore_case=ignore_case), 
-			_match_prefix(regex, "\\*+?", "|&", regex_pos+1), 
-			ignore_case=ignore_case)
-			
-	//ESCAPE CHARACTER
-	: regex[regex_pos] == "\\"?
-		regex[regex_pos+1] == "d"?
-			_is_in(string[string_pos], _digit)?
-				string_pos+1
-			: 
-				undef
-		: regex[regex_pos+1] == "s"?
-			_is_in(string[string_pos], _whitespace)?
-				string_pos+1
-			: 
-				undef
-		: regex[regex_pos+1] == "w"?
-			_is_in(string[string_pos], _alphanumeric)?
-				string_pos+1
-			: 
-				undef
-		: regex[regex_pos+1] == "D"?
-			!_is_in(string[string_pos], _digit)?
-				string_pos+1
-			: 
-				undef
-				
-		: regex[regex_pos+1] == "S"?
-			!_is_in(string[string_pos], _whitespace)?
-				string_pos+1
-			: 
-				undef
-		: regex[regex_pos+1] == "W"?
-			!_is_in(string[string_pos], _alphanumeric)?
-				string_pos+1
-			: 
-				undef
-		:
-			string[string_pos] == regex[regex_pos+1]?
-				string_pos+1
-			:
-				undef
-	
-	//LITERAL
-	: equals(string[string_pos], regex[regex_pos], ignore_case=ignore_case) ?
-		string_pos+1
-	
-	//WILDCARD
-	: regex[regex_pos] == "."?
-		string_pos+1
-	
-	//NO MATCH
-	: 
-		undef
-	;
-		
-function _match_prefix(regex, unary, binary, pos=0) = 
-	pos >= len(regex)?
-		len(regex)
-	: _is_in(regex[pos], unary)?
-		_match_prefix(regex, unary, binary, pos+1)
-	: _is_in(regex[pos], binary)?
-		_match_prefix(regex, unary, binary,  _match_prefix(regex, unary, binary, pos+1))
-	: 
-		pos+1
-	;
 
 function token(string, index, pos=0) = 
 	index == 0?
