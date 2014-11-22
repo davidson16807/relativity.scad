@@ -186,15 +186,10 @@ function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 		ignore_case=ignore_case);
 
 function _compile_regex(regex) = 
-	_prefix_to_tree
-	(
-		_infix_to_prefix(
-			_explicitize_regex_concatenation(
-				_explicitize_regex_alternation(regex)
-			), 
-			_regex_ops
-		),
-		"\\*+?", "|&"
+	_regex_to_tree(
+		_explicitize_regex_concatenation(
+			_explicitize_regex_alternation(regex)
+		)
 	);
 
 function _explicitize_regex_alternation(regex, stack="", i=0) = 
@@ -223,146 +218,41 @@ function _explicitize_regex_concatenation(regex, stack="", i=0) =
 		str(regex[i], 		_explicitize_regex_concatenation(regex, stack, i+1))
 	;
 //converts an infix notated string to a parse tree using the shunting yard algorithm
-function _infix_to_postfix(infix, ops, op_stack=[], in_stack=[], i=0) = 
-	infix == undef?
+function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) = 
+	regex == undef?
 		undef
-	: ops == undef?
-		undef
-	: i == undef?
-		undef
-	: i >= len(infix)?
+	: i >= len(regex)?
 		len(op_stack) <= 0?
 			in_stack[0]
 		:
-			_infix_to_postfix(infix, ops, 
-				_pop(op_stack), 
-				_push(in_stack[1][1], str(_null_coalesce(in_stack[1][0], ""), in_stack[0], op_stack[0])),
-				i=i)
-	: _is_in(infix[i], ops)?
+			_regex_to_tree(regex, _pop(op_stack), 		_push_regex_op(in_stack, op_stack[0]), i)
+	: regex[i] == "\\"?
+			_regex_to_tree(regex, op_stack, 	_push(in_stack,str(regex[i],regex[i+1])),i+2)
+	: _is_in(regex[i], _regex_ops)?
 		op_stack[0] == "(" || 
 		len(op_stack) <= 0 || 
-		_precedence(infix[i], ops) < _precedence(op_stack[0], ops)?
-			_infix_to_postfix(infix, ops, 
-				_push(op_stack, infix[i]), 
-				in_stack,
-				i=i+1)
+		_precedence(regex[i], _regex_ops) < _precedence(op_stack[0], _regex_ops)?
+			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 			 i+1)
 		:
-			_infix_to_postfix(infix, ops, 
-				_pop(op_stack), 
-				_push(in_stack[1][1], str(_null_coalesce(in_stack[1][0], ""), in_stack[0], op_stack[0])),
-				i=i)
-	: infix[i] == "("?
-			_infix_to_postfix(infix, ops, 
-				_push(op_stack, infix[i]), 
-				in_stack,
-				i=i+1)
-	: infix[i] == ")"?
+			_regex_to_tree(regex, _pop(op_stack), 		_push_regex_op(in_stack, op_stack[0]), i)
+	: regex[i] == "("?
+			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 			 i+1)
+	: regex[i] == ")"?
 		op_stack[0] == "(" ?
-			_infix_to_postfix(infix, ops, 
-				_pop(op_stack), 
-				in_stack,
-				i=i+1)
+			_regex_to_tree(regex, _pop(op_stack), 		in_stack,			 i+1)
 		: len(op_stack) <= 0 ?
-			_infix_to_postfix(infix, ops, 
-				op_stack, 
-				in_stack,
-				i=i+1)
+			_regex_to_tree(regex, op_stack, 		in_stack,			 i+1)
 		: 
-			_infix_to_postfix(infix, ops, 
-				_pop(op_stack), 
-				_push(in_stack[1][1], str(_null_coalesce(in_stack[1][0], ""), in_stack[0], op_stack[0])),
-				i=i)
+			_regex_to_tree(regex, _pop(op_stack), 		_push_regex_op(in_stack, op_stack[0]), i)
 	:
-			_infix_to_postfix(infix, ops, 
-				op_stack, 
-				_push(in_stack, infix[i]),
-				i=i+1)
+			_regex_to_tree(regex, op_stack, 		_push(in_stack, regex[i]),	 i+1)
 	;
-//converts infix to postfix using shunting yard algorithm
-function _infix_to_prefix(infix, ops, op_stack=[], in_stack=[], i=0) = 
-	infix == undef?
-		undef
-	: ops == undef?
-		undef
-	: i == undef?
-		undef
-	: i >= len(infix)?
-		len(op_stack) <= 0?
-			in_stack[0]
-		:
-			_infix_to_prefix(infix, ops, 
-				_pop(op_stack), 
-				_push(in_stack[1][1], str(op_stack[0], _null_coalesce(in_stack[1][0], ""), in_stack[0])),
-				i=i)
-	: _is_in(infix[i], ops)?
-		op_stack[0] == "(" || 
-		len(op_stack) <= 0 || 
-		_precedence(infix[i], ops) < _precedence(op_stack[0], ops)?
-			_infix_to_prefix(infix, ops, 
-				_push(op_stack, infix[i]), 
-				in_stack,
-				i=i+1)
-		:
-			_infix_to_prefix(infix, ops, 
-				_pop(op_stack), 
-				_push(in_stack[1][1], str(op_stack[0], _null_coalesce(in_stack[1][0], ""), in_stack[0])),
-				i=i)
-	: infix[i] == "("?
-			_infix_to_prefix(infix, ops, 
-				_push(op_stack, infix[i]), 
-				in_stack,
-				i=i+1)
-	: infix[i] == ")"?
-		op_stack[0] == "(" ?
-			_infix_to_prefix(infix, ops, 
-				_pop(op_stack), 
-				in_stack,
-				i=i+1)
-		: len(op_stack) <= 0 ?
-			_infix_to_prefix(infix, ops, 
-				op_stack, 
-				in_stack,
-				i=i+1)
-		: 
-			_infix_to_prefix(infix, ops, 
-				_pop(op_stack), 
-				_push(in_stack[1][1], str(op_stack[0], _null_coalesce(in_stack[1][0], ""), in_stack[0])),
-				i=i)
-	:
-			_infix_to_prefix(infix, ops, 
-				op_stack, 
-				_push(in_stack, infix[i]),
-				i=i+1)
-	;
-		
-function _prefix_to_tree(prefix, unary, binary, pos=-1) = 
-	prefix == undef?
-		undef
-	: pos < 0?
-		_prefix_to_tree(prefix, unary, binary, pos+1)[0]
-	: pos >= len(prefix)?
-		[]
-	: _is_in(prefix[pos], unary)?
-		_push_unary(	_prefix_to_tree(prefix, unary, binary, pos+1), 	prefix[pos])
-	: _is_in(prefix[pos], binary)?
-		_push_binary(	_prefix_to_tree(prefix, unary, binary, pos+1), 	prefix[pos])
-	: 
-		_push(		_prefix_to_tree(prefix, unary, binary, pos+1), 	prefix[pos])
-	;
-function _push_unary(stack, op) = 
-	_push(_pop(stack), [op, stack[0]]);
-function _push_binary(stack, op) = 
-	_push(_pop(stack), [op, stack[0], stack[1][0]]);
 	
-function _match_prefix(regex, unary, binary, pos=0) = 
-	pos >= len(regex)?
-		len(regex)
-	: _is_in(regex[pos], unary)?
-		_match_prefix(regex, unary, binary, pos+1)
-	: _is_in(regex[pos], binary)?
-		_match_prefix(regex, unary, binary,  _match_prefix(regex, unary, binary, pos+1))
-	: 
-		pos+1
+function _push_regex_op(stack, op) = 
+	_is_in(op, "\\?*+")?
+		_push(_pop(stack), 	[op, stack[0]])
+	:
+		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
 	;
 
 function _pop(stack, n=1) = 
@@ -436,43 +326,42 @@ function _match_regex_tree(string, regex, string_pos=0, ignore_case=false) =
 			ignore_case=ignore_case)
 			
 	//ESCAPE CHARACTER
-	: regex[0] == "\\"?
-		regex[1] == "d"?
-			_is_in(string[string_pos], _digit)?
-				string_pos+1
-			: 
-				undef
-		: regex[1] == "s"?
-			_is_in(string[string_pos], _whitespace)?
-				string_pos+1
-			: 
-				undef
-		: regex[1] == "w"?
-			_is_in(string[string_pos], _alphanumeric)?
-				string_pos+1
-			: 
-				undef
-		: regex[1] == "D"?
-			!_is_in(string[string_pos], _digit)?
-				string_pos+1
-			: 
-				undef
+	: regex[0] == "\\d"?
+		_is_in(string[string_pos], _digit)?
+			string_pos+1
+		: 
+			undef
+	: regex[0] == "\\s"?
+		_is_in(string[string_pos], _whitespace)?
+			string_pos+1
+		: 
+			undef
+	: regex[0] == "\\w"?
+		_is_in(string[string_pos], _alphanumeric)?
+			string_pos+1
+		: 
+			undef
+	: regex[0] == "\\D"?
+		!_is_in(string[string_pos], _digit)?
+			string_pos+1
+		: 
+			undef
 				
-		: regex[1] == "S"?
-			!_is_in(string[string_pos], _whitespace)?
-				string_pos+1
-			: 
-				undef
-		: regex[1] == "W"?
-			!_is_in(string[string_pos], _alphanumeric)?
-				string_pos+1
-			: 
-				undef
+	: regex[0] == "\\S"?
+		!_is_in(string[string_pos], _whitespace)?
+			string_pos+1
+		: 
+			undef
+	: regex[0] == "\\W"?
+		!_is_in(string[string_pos], _alphanumeric)?
+			string_pos+1
+		: 
+			undef
+	: regex[0][0] == "\\"?
+		string[string_pos] == regex[regex_pos+1]?
+			string_pos+1
 		:
-			string[string_pos] == regex[regex_pos+1]?
-				string_pos+1
-			:
-				undef
+			undef
 	
 	//LITERAL
 	: equals(string[string_pos], regex, ignore_case=ignore_case) ?
