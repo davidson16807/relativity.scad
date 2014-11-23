@@ -6,7 +6,7 @@ _alphanumeric = str(_letter, _digit);
 _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
 
-_regex_ops = "\\?*+&|";
+_regex_ops = "?*+&|";
 
 
 
@@ -187,7 +187,7 @@ function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 
 function _compile_regex(regex) = 
 	_regex_to_tree(
-		_explicitize_regex_concatenation(
+		(
 			_explicitize_regex_alternation(regex)
 		)
 	);
@@ -201,22 +201,13 @@ function _explicitize_regex_alternation(regex, stack="", i=0) =
 		regex[i] == "]"?
 			str(")", 		_explicitize_regex_alternation(regex, stack=_pop(stack),		i=i+1))
 		:
-			str("|", regex[i], 	_explicitize_regex_alternation(regex, stack=stack,			i=i+1))
+			str("|", regex[i], _explicitize_regex_alternation(regex, stack=stack,			i=i+1))
 	: regex[i] == "["?
-			str("(", regex[i+1],	_explicitize_regex_alternation(regex, stack=_push(stack, regex[i]), i=i+2))
+			str("(", regex[i+1], _explicitize_regex_alternation(regex, stack=_push(stack, regex[i]), i=i+2))
 	:		
 			str(regex[i], 	_explicitize_regex_alternation(regex, stack=stack,				i=i+1))
 	;
-function _explicitize_regex_concatenation(regex, stack="", i=0) = 
-	i >= len(regex)?
-		""
-	: i+1 >= len(regex)?
-		regex[i]
-	: !_is_in(regex[i], "\\|()") && !_is_in(regex[i+1], "*+?|)")?
-		str(regex[i], "&", 	_explicitize_regex_concatenation(regex, stack, i+1))
-	: 
-		str(regex[i], 		_explicitize_regex_concatenation(regex, stack, i+1))
-	;
+	
 //converts an infix notated string to a parse tree using the shunting yard algorithm
 function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) = 
 	regex == undef?
@@ -225,31 +216,54 @@ function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) =
 		len(op_stack) <= 0?
 			in_stack[0]
 		:
-			_regex_to_tree(regex, _pop(op_stack), 		_push_regex_op(in_stack, op_stack[0]), i)
-	: regex[i] == "\\"?
-			_regex_to_tree(regex, op_stack, 	_push(in_stack,str(regex[i],regex[i+1])),i+2)
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
 	: _is_in(regex[i], _regex_ops)?
-		op_stack[0] == "(" || 
-		len(op_stack) <= 0 || 
-		_precedence(regex[i], _regex_ops) < _precedence(op_stack[0], _regex_ops)?
-			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 			 i+1)
+		_can_shunt(op_stack, regex[i])?
+			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 		 	i+1)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 		_push_regex_op(in_stack, op_stack[0]), i)
-	: regex[i] == "("?
-			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 			 i+1)
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
 	: regex[i] == ")"?
 		op_stack[0] == "(" ?
-			_regex_to_tree(regex, _pop(op_stack), 		in_stack,			 i+1)
+			_regex_to_tree(regex, _pop(op_stack), 	in_stack,			 	i+1)
 		: len(op_stack) <= 0 ?
-			_regex_to_tree(regex, op_stack, 		in_stack,			 i+1)
+			_regex_to_tree(regex, op_stack, 	in_stack,			 	i+1)
 		: 
-			_regex_to_tree(regex, _pop(op_stack), 		_push_regex_op(in_stack, op_stack[0]), i)
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+	: regex[i] == "("?
+		!_can_concat(regex, i)?
+			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 		 	i+1)
+		: _can_shunt(op_stack, "&")?
+			_regex_to_tree(regex, _push(_push(op_stack, "&"), regex[i]), in_stack, 	 	i+1)
+		:
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+	: regex[i] == "\\"?
+		!_can_concat(regex, i)?
+			_regex_to_tree(regex, op_stack, 	_push(in_stack,str(regex[i],regex[i+1])),i+2)
+		: _can_shunt(op_stack, "&")?
+			_regex_to_tree(regex, _push(op_stack, "&"),_push(in_stack,str(regex[i],regex[i+1])),i+2)
+		:
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
 	:
-			_regex_to_tree(regex, op_stack, 		_push(in_stack, regex[i]),	 i+1)
+		!_can_concat(regex, i)?
+			_regex_to_tree(regex, op_stack, 	_push(in_stack, regex[i]),	 	i+1)
+		: _can_shunt(op_stack, "&")?
+			_regex_to_tree(regex, _push(op_stack, "&"),_push(in_stack, regex[i]),	 	i+1)
+		:
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
 	;
+
+	
+function _can_concat(regex, i) = 
+	regex[i-1] != undef &&
+	(!_is_in(regex[i-1], "|(") || regex[i-2] == "\\");
+	
+function _can_shunt(stack, op) = 
+	stack[0] == "(" || 
+	len(stack) <= 0 || 
+	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
 	
 function _push_regex_op(stack, op) = 
-	_is_in(op, "\\?*+")?
+	_is_in(op, "?*+")? // is unary?
 		_push(_pop(stack), 	[op, stack[0]])
 	:
 		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
@@ -474,7 +488,9 @@ function _match_quote(string, quote_char, pos) =
 //function _is_in(string, set, index=0) = 
 //	len(search(string[index],set)) > 0;
 function _is_in(char, string, index=0) = 
-	index >= len(string)?
+	char == undef?
+		false
+	: index >= len(string)?
 		false
 	: char == string[index]?
 		true
