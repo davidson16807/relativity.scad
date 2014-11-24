@@ -196,13 +196,26 @@ function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) =
 			in_stack[0]
 		:
 			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			
+			
+	: op_stack[0] == "{"?
+		regex[i] == "}"?
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i+1)
+		: regex[i] == ","?
+			_regex_to_tree(regex, op_stack, 	_push(in_stack, ""), 		 	i+1)
+		: 
+			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0], regex[i])), i+1)
+	: regex[i] == "{"?
+			_regex_to_tree(regex, _push(op_stack, regex[i]), _push(in_stack, ""), 		i+1)
+			
+			
 	: op_stack[0] == "["?
 		regex[i] == "]"?
 			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i+1)
 		: regex[i] == "\\"?
-			_regex_to_tree(regex, op_stack, _push(_pop(in_stack), str(in_stack[0],regex[i+1])), i+2)
+			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0],regex[i+1])), i+2)
 		:
-			_regex_to_tree(regex, op_stack, _push(_pop(in_stack), str(in_stack[0], regex[i])), i+1)
+			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0], regex[i])), i+1)
 	: regex[i] == "["?
 		!_can_concat(regex, i)?
 			_regex_to_tree(regex, _push(op_stack, regex[i]), _push(in_stack, ""),	 	i+1)
@@ -210,6 +223,8 @@ function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) =
 			_regex_to_tree(regex, _push(_push(op_stack, "&"), regex[i]), _push(in_stack, ""), i+1)
 		:
 			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			
+			
 	: _is_in(regex[i], _regex_ops)?
 		_can_shunt(op_stack, regex[i])?
 			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 		 	i+1)
@@ -256,12 +271,16 @@ function _can_shunt(stack, op) =
 	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
 	
 function _push_regex_op(stack, op) = 
-	_is_in(op, "[?*+")? // is unary?
+	_is_in(op, "[?*+")? 	// is unary?
 		_push(_pop(stack), 	[op, stack[0]])
-	:
+	: _is_in(op, "&|")? 	// is binary?
 		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
+	: 			// is trinary?
+		_push(_pop(stack,2), 	[op, stack[1][1][0], stack[1][0], stack[0], ])
 	;
 
+function _swap(stack, replacement) = 
+	_push(_pop(stack), replacement);
 function _pop(stack, n=1) = 
 	n <= 1?
 		len(stack) <=0? [] : stack[1]
