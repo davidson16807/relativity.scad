@@ -200,22 +200,29 @@ function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) =
 			
 	: op_stack[0] == "{"?
 		regex[i] == "}"?
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i+1)
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	 i+1)
 		: regex[i] == ","?
-			_regex_to_tree(regex, op_stack, 	_push(in_stack, ""), 		 	i+1)
+			_regex_to_tree(regex, op_stack, 	_push(in_stack[0], ""), 		 i+1)
 		: 
-			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0], regex[i])), i+1)
+			_regex_to_tree(regex, op_stack, 	_swap(in_stack[0], str(in_stack[0][0], regex[i])), i+1)
 	: regex[i] == "{"?
 			_regex_to_tree(regex, _push(op_stack, regex[i]), _push(in_stack, ""), 		i+1)
 			
 			
-	: op_stack[0] == "["?
+	: op_stack[0] == "[" || op_stack[0] == "[^"?
 		regex[i] == "]"?
 			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i+1)
 		: regex[i] == "\\"?
-			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0],regex[i+1])), i+2)
+			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0],regex[i+1])), 	i+2)
 		:
-			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0], regex[i])), i+1)
+			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0], regex[i])), 	i+1)
+	: regex[i] == "[" && regex[i] == "^"?
+		!_can_concat(regex, i)?
+			_regex_to_tree(regex, _push(op_stack, "[^"), _push(in_stack, ""),	 	i+1)
+		: _can_shunt(op_stack, "&")?
+			_regex_to_tree(regex, _push(_push(op_stack, "&"), "[^"), _push(in_stack, ""), i+1)
+		:
+			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
 	: regex[i] == "["?
 		!_can_concat(regex, i)?
 			_regex_to_tree(regex, _push(op_stack, regex[i]), _push(in_stack, ""),	 	i+1)
@@ -273,10 +280,8 @@ function _can_shunt(stack, op) =
 function _push_regex_op(stack, op) = 
 	_is_in(op, "[?*+")? 	// is unary?
 		_push(_pop(stack), 	[op, stack[0]])
-	: _is_in(op, "&|")? 	// is binary?
+	: 		 	// is binary?
 		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
-	: 			// is trinary?
-		_push(_pop(stack,2), 	[op, stack[1][1][0], stack[1][0], stack[0], ])
 	;
 
 function _swap(stack, replacement) = 
@@ -329,6 +334,15 @@ function _match_regex_tree(string, regex, string_pos=0, ignore_case=false) =
 				ignore_case=ignore_case),
 			string_pos)
 
+	//KLEENE BRACKETS
+	: regex[0] == "{" ?
+		_null_coalesce(
+			_match_regex_tree(string, regex,
+				_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case),
+				ignore_case=ignore_case),
+			_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case)
+		)
+		
 	//KLEENE PLUS
 	: regex[0] == "+" ?
 		_null_coalesce(
