@@ -188,83 +188,83 @@ function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 
 	
 //converts an infix notated string to a parse tree using the shunting yard algorithm
-function _regex_to_tree(regex, op_stack=[], in_stack=[], i=0) = 
+function _regex_to_tree(regex, ops=[], args=[], i=0) = 
 	regex == undef?
 		undef
 	: i >= len(regex)?
-		len(op_stack) <= 0?
-			in_stack[0]
+		len(ops) <= 0?
+			args[0]
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 			
 			
-	: op_stack[0] == "{"?
+	: ops[0] == "{"?
 		regex[i] == "}"?
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	 i+1)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		 i+1)
 		: regex[i] == ","?
-			_regex_to_tree(regex, op_stack, 	_push(in_stack[0], ""), 		 i+1)
+			_regex_to_tree(regex, ops, 			_push(args[0], ""), 			 i+1)
 		: 
-			_regex_to_tree(regex, op_stack, 	_swap(in_stack[0], str(in_stack[0][0], regex[i])), i+1)
+			_regex_to_tree(regex, ops, 			_swap(args[0], str(args[0][0], regex[i])), i+1)
 	: regex[i] == "{"?
-			_regex_to_tree(regex, _push(op_stack, regex[i]), _push(in_stack, ""), 		i+1)
+			_regex_to_tree(regex, _push(ops, regex[i]),	_push(args, ""), 			i+1)
 			
 			
-	: op_stack[0] == "[" || op_stack[0] == "[^"?
+	: ops[0] == "[" || ops[0] == "[^"?
 		regex[i] == "]"?
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i+1)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i+1)
 		: regex[i] == "\\"?
-			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0],regex[i+1])), 	i+2)
+			_regex_to_tree(regex, ops, 			_swap(args, str(args[0],regex[i+1])), 	i+2)
 		:
-			_regex_to_tree(regex, op_stack, _swap(in_stack, str(in_stack[0], regex[i])), 	i+1)
+			_regex_to_tree(regex, ops, 			_swap(args, str(args[0], regex[i])), 	i+1)
 	: regex[i] == "[" && regex[i+1] == "^"?
 		!_can_concat(regex, i)?
-			_regex_to_tree(regex, _push(op_stack, "[^"), _push(in_stack, ""),	 	i+2)
-		: _can_shunt(op_stack, "&")?
-			_regex_to_tree(regex, _push(_push(op_stack, "&"), "[^"), _push(in_stack, ""), i+2)
+			_regex_to_tree(regex, _push(ops, "[^"), 	_push(args, ""),	 		i+2)
+		: _can_shunt(ops, "&")?
+			_regex_to_tree(regex, _push(_push(ops, "&"), "[^"), _push(args, ""), i+2)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 	: regex[i] == "["?
 		!_can_concat(regex, i)?
-			_regex_to_tree(regex, _push(op_stack, regex[i]), _push(in_stack, ""),	 	i+1)
-		: _can_shunt(op_stack, "&")?
-			_regex_to_tree(regex, _push(_push(op_stack, "&"), regex[i]), _push(in_stack, ""), i+1)
+			_regex_to_tree(regex, _push(ops, regex[i]), 	_push(args, ""),	 		i+1)
+		: _can_shunt(ops, "&")?
+			_regex_to_tree(regex, _push(_push(ops, "&"), regex[i]), _push(args, ""), i+1)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 			
 			
 	: _is_in(regex[i], _regex_ops)?
-		_can_shunt(op_stack, regex[i])?
-			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 		 	i+1)
+		_can_shunt(ops, regex[i])?
+			_regex_to_tree(regex, _push(ops, regex[i]), 	args, 		 			i+1)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 	: regex[i] == ")"?
-		op_stack[0] == "(" ?
-			_regex_to_tree(regex, _pop(op_stack), 	in_stack,			 	i+1)
-		: len(op_stack) <= 0 ?
-			_regex_to_tree(regex, op_stack, 	in_stack,			 	i+1)
+		ops[0] == "(" ?
+			_regex_to_tree(regex, _pop(ops), 		args,			 		i+1)
+		: len(ops) <= 0 ?
+			_regex_to_tree(regex, ops, 			args,			 		i+1)
 		: 
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 	: regex[i] == "("?
 		!_can_concat(regex, i)?
-			_regex_to_tree(regex, _push(op_stack, regex[i]), in_stack, 		 	i+1)
-		: _can_shunt(op_stack, "&")?
-			_regex_to_tree(regex, _push(_push(op_stack, "&"), regex[i]), in_stack, 	 	i+1)
+			_regex_to_tree(regex, _push(ops, regex[i]), 	args, 		 			i+1)
+		: _can_shunt(ops, "&")?
+			_regex_to_tree(regex, _push(_push(ops, "&"), regex[i]), args, 	 			i+1)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 	: regex[i] == "\\"?
 		!_can_concat(regex, i)?
-			_regex_to_tree(regex, op_stack, 	_push(in_stack,str(regex[i],regex[i+1])),i+2)
-		: _can_shunt(op_stack, "&")?
-			_regex_to_tree(regex, _push(op_stack, "&"),_push(in_stack,str(regex[i],regex[i+1])),i+2)
+			_regex_to_tree(regex, ops, 			_push(args,str(regex[i],regex[i+1])),	i+2)
+		: _can_shunt(ops, "&")?
+			_regex_to_tree(regex, _push(ops, "&"),		_push(args,str(regex[i],regex[i+1])),	i+2)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 	:
 		!_can_concat(regex, i)?
-			_regex_to_tree(regex, op_stack, 	_push(in_stack, regex[i]),	 	i+1)
-		: _can_shunt(op_stack, "&")?
-			_regex_to_tree(regex, _push(op_stack, "&"),_push(in_stack, regex[i]),	 	i+1)
+			_regex_to_tree(regex, ops, 			_push(args, regex[i]),	 		i+1)
+		: _can_shunt(ops, "&")?
+			_regex_to_tree(regex, _push(ops, "&"),		_push(args, regex[i]),	 		i+1)
 		:
-			_regex_to_tree(regex, _pop(op_stack), 	_push_regex_op(in_stack, op_stack[0]), 	i)
+			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		i)
 	;
 
 	
@@ -328,36 +328,31 @@ function _match_regex_tree(string, regex, string_pos=0, ignore_case=false) =
 
 	//KLEENE STAR
 	: regex[0] == "*" ?
-		_null_coalesce(
-			_match_regex_tree(string, regex,
-				_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case),
-				ignore_case=ignore_case),
-			string_pos)
+		_match_repetition(string, regex[1],
+			0, undef,
+			string_pos,
+			ignore_case=ignore_case)
 
 	//KLEENE BRACKETS
 	: regex[0] == "{" ?
-		_null_coalesce(
-			_match_regex_tree(string, regex,
-				_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case),
-				ignore_case=ignore_case),
-			_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case)
-		)
+		_match_repetition(string, regex[1],
+			regex[2], undef,
+			string_pos,
+			ignore_case=ignore_case)
 		
 	//KLEENE PLUS
 	: regex[0] == "+" ?
-		_null_coalesce(
-			_match_regex_tree(string, regex,
-				_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case),
-				ignore_case=ignore_case),
-			_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case)
-		)
+		_match_repetition(string, regex[1],
+			1, undef,
+			string_pos,
+			ignore_case=ignore_case)
 
 	//OPTION
 	: regex[0] == "?" ?
-		_null_coalesce(
-			_match_regex_tree(string, regex[1], string_pos, ignore_case=ignore_case),
-			string_pos
-		)
+		_match_repetition(string, regex[1],
+			0, 1,
+			string_pos,
+			ignore_case=ignore_case)
 
 	//CONCATENATION
 	: regex[0] == "&" ?	
@@ -428,7 +423,6 @@ function _match_regex_tree(string, regex, string_pos=0, ignore_case=false) =
 	: 
 		undef
 	;
-		
 
 function token(string, index, pos=0) = 
 	index == 0?
@@ -492,6 +486,17 @@ function trim(string) =
 			""
 		)
 	;
+
+function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) = 
+	_null_coalesce(
+		_match_repetition(string, regex, min_reps-1, max_reps-1, 
+			_match_regex_tree(string, regex, pos, ignore_case=ignore_case)
+			, ignore_case=ignore_case),
+		(min_reps== undef || min_reps <= 0) && (max_reps == undef || max_reps >= 0)?
+			pos
+		: 
+			undef
+	);
 
 function _match_set(string, set, pos) = 
 	pos >= len(string)?
