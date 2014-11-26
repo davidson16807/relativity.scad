@@ -202,11 +202,11 @@ function _regex_to_tree(regex, ops=[], args=[], i=0) =
 		regex[i] == "}"?
 			_regex_to_tree(regex, _pop(ops), 		_push_regex_op(args, ops[0]), 		 i+1)
 		: regex[i] == ","?
-			_regex_to_tree(regex, ops, 			_push(args[0], ""), 			 i+1)
+			_regex_to_tree(regex, ops, 			_swap(args, _push(args[0], "")), 	 i+1)
 		: 
-			_regex_to_tree(regex, ops, 			_swap(args[0], str(args[0][0], regex[i])), i+1)
+			_regex_to_tree(regex, ops, 			_swap(args, _swap(args[0], str(args[0][0], regex[i]))), i+1)
 	: regex[i] == "{"?
-			_regex_to_tree(regex, _push(ops, regex[i]),	_push(args, ""), 			i+1)
+			_regex_to_tree(regex, _push(ops, regex[i]),	_push(args, ["", []]), 			i+1)
 			
 			
 	: ops[0] == "[" || ops[0] == "[^"?
@@ -278,7 +278,7 @@ function _can_shunt(stack, op) =
 	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
 	
 function _push_regex_op(stack, op) = 
-	_is_in(op[0], "[?*+")? 	// is unary?
+	_is_in(op[0], "[?*+")? // is unary?
 		_push(_pop(stack), 	[op, stack[0]])
 	: 		 	// is binary?
 		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
@@ -335,10 +335,16 @@ function _match_regex_tree(string, regex, string_pos=0, ignore_case=false) =
 
 	//KLEENE BRACKETS
 	: regex[0] == "{" ?
-		_match_repetition(string, regex[1],
-			regex[2], undef,
-			string_pos,
-			ignore_case=ignore_case)
+		regex[2][1][0] == undef?
+			_match_repetition(string, regex[1],
+				_parse_int(regex[2][0], 10), undef,
+				string_pos,
+				ignore_case=ignore_case)
+		:
+			_match_repetition(string, regex[1],
+				_parse_int(regex[2][1][0], 10), _parse_int(regex[2][0], 10),
+				string_pos,
+				ignore_case=ignore_case)
 		
 	//KLEENE PLUS
 	: regex[0] == "+" ?
@@ -657,7 +663,7 @@ function parse_int(string, base=10, i=0, nb=0) =
 	string[0] == "-" ? 
 		-1*_parse_int(string, base, 1) 
 	: 
-		_strToInt(str, base);
+		_parse_int(string, base);
 
 function _parse_int(string, base, i=0, nb=0) = 
 	i == len(string) ? 
