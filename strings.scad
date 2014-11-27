@@ -213,20 +213,22 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i+1)
 		: rx[i] == "\\"?
 			_parse_rx(rx, ops, 		_swap(args, _push(args[0],rx[i+1])), 	i+2)
+		: rx[i] == "-"?
+			_parse_rx(rx, ops, 		_swap(args, _push(_pop(args[0]), ["-", args[0][0], rx[i+1]])), i+2)
 		:
 			_parse_rx(rx, ops, 		_swap(args, _push(args[0], rx[i])), 	i+1)
 	: rx[i] == "[" && rx[i+1] == "^"?
 		!_can_concat(rx, i)?
 			_parse_rx(rx, _push(ops, "[^"),	_push(args, []),	 		i+2)
 		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops,"&"),"[^"), _push(args, ""), i+2)
+			_parse_rx(rx, _push(_push(ops,"&"),"[^"), _push(args, []), i+2)
 		:
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
 	: rx[i] == "["?
 		!_can_concat(rx, i)?
 			_parse_rx(rx, _push(ops, "["), 	_push(args, []),	 		i+1)
 		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops,"&"),"["), _push(args, ""), i+1)
+			_parse_rx(rx, _push(_push(ops,"&"),"["), _push(args, []), i+1)
 		:
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
 			
@@ -508,6 +510,8 @@ function _is_in_stack(string, stack, ignore_case=false) =
 		false
 	: len(stack) <= 0?
 		false
+	: stack[0][0] == "-"?
+		_is_in_range(string, stack[0][1], stack[0][2])
 	: string == stack[0]?
 		true
 	: ignore_case && lower(string) == lower(stack[0])?
@@ -515,6 +519,10 @@ function _is_in_stack(string, stack, ignore_case=false) =
 	:
 		_is_in_stack(string, _pop(stack), ignore_case=ignore_case)
 	;
+	
+function _is_in_range(char, min_char, max_char) = 
+	search(char, _alphanumeric,0)[0][0] >= search(min_char, _alphanumeric,0)[0][0] &&
+	search(char, _alphanumeric,0)[0][0] <= search(max_char, _alphanumeric,0)[0][0];
 
 function _match_set(string, set, pos) = 
 	pos >= len(string)?
