@@ -204,8 +204,6 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, ops, 		_swap(args, _push(args[0], "")), 	 i+1)
 		: 
 			_parse_rx(rx, ops, 		_swap(args, _swap(args[0], str(args[0][0], rx[i]))), i+1)
-	: rx[i] == "{"?
-			_parse_rx(rx, _push(ops, "{"),	_push(args, ["", []]), 			i+1)
 			
 			
 	: ops[0] == "[" || ops[0] == "[^"?
@@ -231,6 +229,9 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, _push(_push(ops,"&"),"["), _push(args, []), i+1)
 		:
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
+			
+	: rx[i] == "{"?
+			_parse_rx(rx, _push(ops, "{"),	_push(args, ["", []]), 			i+1)
 			
 			
 	: _is_in(rx[i], _regex_ops)?
