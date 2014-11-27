@@ -1,708 +1,333 @@
-_digit = "0123456789";
-_lowercase = "abcdefghijklmnopqrstuvwxyz";
-_uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-_letter = str(_lowercase, _uppercase);
-_alphanumeric = str(_letter, _digit);
-_whitespace = " \t\r\n";
-_nonsymbol = str(_alphanumeric, _whitespace);
+include <strings.scad>
 
-_regex_ops = "?*+&|";
+test = "foo  (1, bar2)";
+regex_test = "foooobazfoobarbaz";
 
-
-
-
-
-
-
-function grep(string, pattern, index=0, ignore_case=false) = 		//string
-	_between_range(string, _index_of_regex(string, _parse_rx(pattern), index, ignore_case=ignore_case));
-
-
-
-
-
-function replace(string, replaced, replacement, ignore_case=false, regex=false) = 	//string
-	regex?
-		_replace_regex(string, _parse_rx(replaced), replacement, ignore_case=ignore_case)
-	: string == undef?
-		undef
-	: pos >= len(string)?
-		""
-	: contains(string, replaced, ignore_case=ignore_case)?
-		str(	before(string, index_of(string, replaced, ignore_case=ignore_case)),
-			replacement,
-			replace(after(string, index_of(string, replaced, ignore_case=ignore_case)+len(replaced)-1), 
-				replaced, replacement, ignore_case=ignore_case)
-		)
-	: 
-		string
-	;
-function _replace_regex(string, pattern, replacement, ignore_case=false) = 	//string
-	string == undef?
-		undef
-	: pos >= len(string)?
-		""
-	: 
-		_replace_between_range(string, pattern, replacement, 
-			_index_of_regex(string, pattern, ignore_case=ignore_case),
-			ignore_case = ignore_case
-		)
-	;
-function _replace_between_range(string, pattern, replacement, range, ignore_case=false) = 
-	range != undef?
-		str(	before(string, range.x),
-			replacement,
-			_replace_regex(after(string, range.y-1), 
-				pattern, replacement,
-				ignore_case=ignore_case)
-		)
-	: 
-		string
-	;
-
-
-
-
-function split(string, seperator=" ", index=0, pos=0, ignore_case = false, regex=false) = 
-	regex?
-		_split_regex(string, _parse_rx(seperator), index, ignore_case=ignore_case)
-	: index < 0?
-		undef
-	: index == 0?
-		between(string, pos, 
-			_null_coalesce(	_index_of_first(string, seperator, pos=pos, ignore_case=ignore_case), 
-					len(string)+1))
-	:
-		split(string, seperator, 
-			index-1,
-			_null_coalesce(	_index_of_first(string, seperator, pos=pos, ignore_case=ignore_case)+len(seperator), 
-					len(string)+1),
-			ignore_case=ignore_case)
-	;
-function _split_regex(string, pattern, index, pos=0, ignore_case=false) =
-	index < 0?
-		undef
-	: index == 0?
-		between(string, pos, 
-			_null_coalesce(	_index_of_first_regex(string, pattern, pos=pos, ignore_case=ignore_case).x, 
-					len(string)+1))
-	:
-		_split_regex(string, pattern, 
-			index-1, 
-			_null_coalesce(	_index_of_first_regex(string, pattern, pos=pos, ignore_case=ignore_case).y, 
-					len(string)+1), 
-			ignore_case=ignore_case)
-	;
-
-
-
-
-function contains(string, substring, ignore_case=false, regex=false) = 
-	regex?
-		_contains_regex(string, _parse_rx(substring), ignore_case=ignore_case)
-	:
-		index_of(string, substring, ignore_case=ignore_case) != undef
-	; 
-function _contains_regex(string, pattern, ignore_case=false) = 			//bool		
-	_index_of_regex(string, pattern, ignore_case=ignore_case) != undef;
-	
-
-
-function index_of(string, pattern, index=0, pos=0, ignore_case=false, regex=false) = 
-	regex?
-		_index_of_regex(string, _parse_rx(pattern), index, ignore_case=ignore_case)
-	: len(pattern) == 1 && !ignore_case?
-		search(pattern, after(string, pos), 0)[0][index] + pos + 1
-	: index <= 0?
-		_index_of_first(string, pattern, pos, ignore_case=ignore_case)
-	: 
-		index_of(string, pattern, index-1, 
-			pos = _index_of_first(string, pattern, ignore_case=ignore_case) + len(pattern),
-			ignore_case=ignore_case)
-	;
-
-function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false) = 
-	string == undef?
-		undef
-	: pattern == undef?
-		undef
-	: pos < 0 || pos == undef?
-		undef
-	: pos >= len(string)?
-		undef
-	: starts_with(string, pattern, pos, ignore_case=ignore_case)?
-		pos
-	:
-		_index_of_first(string, pattern, pos+1, ignore_case=ignore_case)
-	;
-function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 		//[start,end]
-	index == 0?
-		_index_of_first_regex(string, pattern, pos, ignore_case=ignore_case)
-	:
-		_index_of_regex(string, pattern, 
-			index = index-1,
-			pos = _index_of_first_regex(string, pattern, index=0, pos=pos, ignore_case=ignore_case).y,
-			ignore_case=ignore_case)
-	;
-function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
-	pos >= len(string)?
-		undef
-	: _coalesce_on([pos, _match_parsed_rx(string, pattern, pos, ignore_case=ignore_case)], 
-		[pos, undef],
-		_index_of_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
-
-
-
-
-
-function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
-	regex?
-		_match_parsed_rx(string,
-			_parse_rx(start), 
-			pos, 
-			ignore_case=ignore_case) != undef
-	:
-		equals(	substring(string, pos, len(start)), 
-			start, 
-			ignore_case=ignore_case)
-	;
-function ends_with(string, end, ignore_case=false) =
-	equals(	after(string, len(string)-len(end)-1), 
-		end,
-		ignore_case=ignore_case)
-	;
-
-
-
-
-
-
-
-function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
-	_match_parsed_rx(string,
-		_parse_rx(pattern), 
-		pos, 
-		ignore_case=ignore_case);
-
-
-	
-//converts an infix notated regex string to a parse tree using the shunting yard algorithm
-function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) = 
-	rx == undef?
-		undef
-	: i >= len(rx)?
-		len(ops) <= 0?
-			args[0]
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-			
-			
-	: ops[0] == "{"?
-		rx[i] == "}"?
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		 i+1)
-		: rx[i] == ","?
-			_parse_rx(rx, ops, 		_swap(args, _push(args[0], "")), 	 i+1)
-		: 
-			_parse_rx(rx, ops, 		_swap(args, _swap(args[0], str(args[0][0], rx[i]))), i+1)
-	: rx[i] == "{"?
-			_parse_rx(rx, _push(ops, "{"),	_push(args, ["", []]), 			i+1)
-			
-			
-	: ops[0] == "[" || ops[0] == "[^"?
-		rx[i] == "]"?
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i+1)
-		: rx[i] == "\\"?
-			_parse_rx(rx, ops, 		_swap(args, _push(args[0],rx[i+1])), 	i+2)
-		: rx[i] == "-"?
-			_parse_rx(rx, ops, 		_swap(args, _push(_pop(args[0]), ["-", args[0][0], rx[i+1]])), i+2)
-		:
-			_parse_rx(rx, ops, 		_swap(args, _push(args[0], rx[i])), 	i+1)
-	: rx[i] == "[" && rx[i+1] == "^"?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, _push(ops, "[^"),	_push(args, []),	 		i+2)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops,"&"),"[^"), _push(args, []), i+2)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == "["?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, _push(ops, "["), 	_push(args, []),	 		i+1)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops,"&"),"["), _push(args, []), i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-			
-			
-	: _is_in(rx[i], _regex_ops)?
-		_can_shunt(ops, rx[i])?
-			_parse_rx(rx, _push(ops, rx[i]), args, 		 		i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == ")"?
-		ops[0] == "(" ?
-			_parse_rx(rx, _pop(ops), 	args,			 		i+1)
-		: len(ops) <= 0 ?
-			_parse_rx(rx, ops, 		args,			 		i+1)
-		: 
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == "("?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, _push(ops, "("), 	args, 		 			i+1)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops, "&"), "("), args, 	 		i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == "\\"?
-		!_can_concat(rx, i)?
-			v(rx, ops, 			_push(args,str(rx[i],rx[i+1])),	i+2)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(ops, "&"),	_push(args,str(rx[i],rx[i+1])),	i+2)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	:
-		!_can_concat(rx, i)?
-			_parse_rx(rx, ops, 		_push(args, rx[i]),	 		i+1)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(ops, "&"),	_push(args, rx[i]),	 		i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	;
-
-	
-function _can_concat(regex, i) = 
-	regex[i-1] != undef &&
-	(!_is_in(regex[i-1], "|(") || regex[i-2] == "\\");
-	
-function _can_shunt(stack, op) = 
-	stack[0] == "(" || 
-	len(stack) <= 0 || 
-	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
-	
-function _push_rx_op(stack, op) = 
-	_is_in(op[0], "[?*+")? // is unary?
-		_push(_pop(stack), 	[op, stack[0]])
-	: 		 	// is binary?
-		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
-	;
-
-function _swap(stack, replacement) = 
-	_push(_pop(stack), replacement);
-function _pop(stack, n=1) = 
-	n <= 1?
-		len(stack) <=0? [] : stack[1]
-	:
-		_pop(_pop(stack), n-1)
-	;
-function _push(stack, char) = 
-	[char, stack];
-
-function _precedence(op, ops) = 
-	search(op, ops)[0];
-	
-function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) = 
-	//INVALID INPUT
-	string == undef?
-		undef
-	
-	//string length and anchors
-	: regex == "^"?
-		string_pos == 0?
-			string_pos
-		:
-			undef
-	: regex == "$"?
-		string_pos >= len(string)?
-			string_pos
-		:
-			undef
-	: string_pos == undef?
-		undef
-	: string_pos >= len(string)?
-		undef
-		
-	//ALTERNATION
-	: regex[0] == "|" ?
-		_null_coalesce(
-			_match_parsed_rx(string, regex[1], string_pos, ignore_case=ignore_case),
-			_match_parsed_rx(string, regex[2], string_pos, ignore_case=ignore_case)
-		)
-
-	//KLEENE STAR
-	: regex[0] == "*" ?
-		_match_repetition(string, regex[1],
-			0, undef,
-			string_pos,
-			ignore_case=ignore_case)
-
-	//KLEENE BRACKETS
-	: regex[0] == "{" ?
-		regex[2][1][0] == undef?
-			_match_repetition(string, regex[1],
-				_parse_int(regex[2][0], 10), undef,
-				string_pos,
-				ignore_case=ignore_case)
-		:
-			_match_repetition(string, regex[1],
-				_parse_int(regex[2][1][0], 10), _parse_int(regex[2][0], 10),
-				string_pos,
-				ignore_case=ignore_case)
-		
-	//KLEENE PLUS
-	: regex[0] == "+" ?
-		_match_repetition(string, regex[1],
-			1, undef,
-			string_pos,
-			ignore_case=ignore_case)
-
-	//OPTION
-	: regex[0] == "?" ?
-		_match_repetition(string, regex[1],
-			0, 1,
-			string_pos,
-			ignore_case=ignore_case)
-
-	//CONCATENATION
-	: regex[0] == "&" ?	
-		_match_parsed_rx(string, regex[2], 
-			_match_parsed_rx(string, regex[1], string_pos, ignore_case=ignore_case), 
-			ignore_case=ignore_case)
-			
-	//ESCAPE CHARACTER
-	: regex[0] == "\\d"?
-		_is_in(string[string_pos], _digit)?
-			string_pos+1
-		: 
-			undef
-	: regex[0] == "\\s"?
-		_is_in(string[string_pos], _whitespace)?
-			string_pos+1
-		: 
-			undef
-	: regex[0] == "\\w"?
-		_is_in(string[string_pos], _alphanumeric)?
-			string_pos+1
-		: 
-			undef
-	: regex[0] == "\\D"?
-		!_is_in(string[string_pos], _digit)?
-			string_pos+1
-		: 
-			undef
-				
-	: regex[0] == "\\S"?
-		!_is_in(string[string_pos], _whitespace)?
-			string_pos+1
-		: 
-			undef
-	: regex[0] == "\\W"?
-		!_is_in(string[string_pos], _alphanumeric)?
-			string_pos+1
-		: 
-			undef
-	: regex[0][0] == "\\"?
-		string[string_pos] == regex[0][1]?
-			string_pos+1
-		:
-			undef
-	
-	//CHARACTER SET
-	: regex[0] == "[" ?
-		_is_in_stack(string[string_pos], regex[1], ignore_case=ignore_case)?
-			string_pos+1
-		:
-			undef
-	//NEGATIVE CHARACTER SET
-	: regex[0] == "[^" ?
-		!_is_in_stack(string[string_pos], regex[1], ignore_case=ignore_case)?
-			string_pos+1
-		:
-			undef
-		
-	//LITERAL
-	: equals(string[string_pos], regex, ignore_case=ignore_case) ?
-		string_pos+1
-	
-	//WILDCARD
-	: regex == "."?
-		string_pos+1
-	
-	//NO MATCH
-	: 
-		undef
-	;
-
-function token(string, index, pos=0) = 
-	index == 0?
-		_coalesce_on(between(string, _token_start(string, pos), _token_end(string, pos)),
-				"",
-				undef)
-	:
-		token(string, index-1, _token_end(string, pos))
-	;
-
-function _token_start(string, pos=0, ignore_space=true) = 
-	pos >= len(string)?
-		undef
-	: pos == len(string)?
-		len(string)
-	: _is_in(string[pos], _whitespace) && ignore_space?
-		_match_set(string, _whitespace, pos)
-	: //symbol
-		pos
-	;
-	
-
-function _token_end(string, pos=0, ignore_space=true, tokenize_quotes=true) = 
-	pos >= len(string)?
-		len(string)
-	: _is_in(string[pos], _alphanumeric) ?
-		_match_set(string, _alphanumeric, pos)
-	: _is_in(string[pos], _whitespace) ? (
-		ignore_space?
-			_token_end(string, _match_set(string, _whitespace, pos))
-		:
-			_match_set(string, _whitespace, pos)
-	)
-	
-	: string[pos] == "\"" && tokenize_quotes ?
-		_match_quote(string, "\"", pos+1)
-	: string[pos] == "'" && tokenize_quotes?
-		_match_quote(string, "'", pos+1)
-	: 
-		pos+1
-	;
-
-function is_empty(string) = 
-	string == "";
-
-function is_null_or_empty(string) = 
-	string == undef || string == "";
-	
-function is_null_or_whitespace(string) = 
-	string == undef || trim(string) == "";
-
-function trim(string) = 
-	string == undef?
-		undef
-	: string == ""?
-		""
-	:
-		_null_coalesce(
-			between(string, _match_set(string, _whitespace, 0), 
-					_match_set_reverse(string, _whitespace, len(string))),
-			""
-		)
-	;
-
-function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) = 
-	_null_coalesce(
-		_match_repetition(string, regex, min_reps-1, max_reps-1, 
-			_match_parsed_rx(string, regex, pos, ignore_case=ignore_case)
-			, ignore_case=ignore_case),
-		(min_reps== undef || min_reps <= 0) && (max_reps == undef || max_reps >= 0)?
-			pos
-		: 
-			undef
-	);
-	
-function _is_in_stack(string, stack, ignore_case=false) = 
-	stack == undef?
-		false
-	: len(stack) <= 0?
-		false
-	: stack[0][0] == "-"?
-		_is_in_range(string, stack[0][1], stack[0][2])
-	: string == stack[0]?
+function all(booleans, index=0) = 
+	index >= len(booleans)?
 		true
-	: ignore_case && lower(string) == lower(stack[0])?
-		true
-	:
-		_is_in_stack(string, _pop(stack), ignore_case=ignore_case)
-	;
-	
-function _is_in_range(char, min_char, max_char) = 
-	search(char, _alphanumeric,0)[0][0] >= search(min_char, _alphanumeric,0)[0][0] &&
-	search(char, _alphanumeric,0)[0][0] <= search(max_char, _alphanumeric,0)[0][0];
-
-function _match_set(string, set, pos) = 
-	pos >= len(string)?
-		len(string)
-	: _is_in(string[pos], set )?
-		_match_set(string, set, pos+1)
-	: 
-		pos
-	;
-
-function _match_set_reverse(string, set, pos) = 
-	pos <= 0?
-		0
-	: _is_in(string[pos-1], set)?
-		_match_set_reverse(string, set, pos-1)
-	: 
-		pos
-	;
-
-function _match_quote(string, quote_char, pos) = 
-	pos >= len(string)?
-		len(string)
-	: string[pos] == quote_char?
-		pos
-	: string[pos] == "\\"? 
-		_match_quote(string, quote_char, pos+2)
-	: 
-		_match_quote(string, quote_char, pos+1)
-	;
-
-
-// quicker in theory, but slow in practice due to generated warnings
-//function _is_in(string, set, index=0) = 
-//	len(search(string[index],set)) > 0;
-function _is_in(char, string, index=0, ignore_case=false) = 
-	char == undef?
+	: !booleans[index]?
 		false
-	: ignore_case?
-		_is_in(lower(char), lower(string))
-	: index >= len(string)?
-		false
-	: char == string[index]?
-		true
-	:
-		_is_in(char, string, index+1)
-	;
-
-function equals(this, that, ignore_case=false) =
-	ignore_case?
-		lower(this) == lower(that)
-	:
-		this==that
-	;
-
-function lower(string) = 
-	_transform_case(string, search(string, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0), 97);
-
-function upper(string) = 
-	_transform_case(string, search(string, "abcdefghijklmnopqrstuvwxyz",0), 65);
-
-function _transform_case(string, encoded, offset, index=0) = 
-	index >= len(string)?
-		""
-	: len(encoded[index]) <= 0?
-		str(substring(string, index, 1),	_transform_case(string, encoded, offset, index+1))
 	: 
-		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
-	;
-
-
-
-function join(strings, delimeter) = 
-	strings == undef?
-		undef
-	: strings == []?
-		""
-	: _join(strings, len(strings)-1, delimeter, 0);
-
-function _join(strings, index, delimeter) = 
-	index==0 ? 
-		strings[index] 
-	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
-	
-function reverse(string, i=0) = 
-	string == undef?
-		undef
-	: len(string) <= 0?
-		""
-	: i <= len(string)-1?
-		str(reverse(string, i+1), string[i])
-	:
-		"";
-
-function substring(string, start, length=undef) = 
-	length == undef? 
-		between(string, start, len(string)) 
-	: 
-		between(string, start, length+start)
-	;
-
-function _between_range(string, vector) = 
-	vector == undef?
-		undef
-	: 
-		between(string, vector.x, vector.y)
-	;
-//note: start is inclusive, end is exclusive
-function between(string, start, end) = 
-	string == undef?
-		undef
-	: start == undef?
-		undef
-	: start > len(string)?
-		undef
-	: start < 0?
-		before(string, end)
-	: end == undef?
-		undef
-	: end < 0?
-		undef
-	: end > len(string)?
-		after(string, start-1)
-	: start > end?
-		undef
-	: start == end ? 
-		"" 
-	: 
-		str(string[start], between(string, start+1, end))
-	;
-
-function before(string, index=0) = 
-	string == undef?
-		undef
-	: index == undef?
-		undef
-	: index > len(string)?
-		string
-	: index <= 0?
-		""
-	: 
-		str(before(string, index-1), string[index-1])
-	;
-
-function after(string, index=0) =
-	string == undef?
-		undef
-	: index == undef?
-		undef
-	: index < 0?
-		string
-	: index >= len(string)-1?
-		""
-	:
-		str(string[index+1], after(string, index+1))
+		all(booleans, index+1)
 	;
 	
-function parse_int(string, base=10, i=0, nb=0) = 
-	string[0] == "-" ? 
-		-1*_parse_int(string, base, 1) 
-	: 
-		_parse_int(string, base);
-
-function _parse_int(string, base, i=0, nb=0) = 
-	i == len(string) ? 
-		nb 
-	: 
-		nb + _parse_int(string, base, i+1, 
-				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
 
 
-function _null_coalesce(string, replacement) = 
-	string == undef?
-		replacement
-	:
-		string
-	;
-function _coalesce_on(value, error, fallback) = 
-	value == error?
-		fallback
-	: 
-		value
-	;
+
 	
+
+
+     
+echo([	"after:",
+	after("foo", -1) == "foo",
+	after("foo", 0) == "oo",
+	after("foo", 1) == "o",
+	after("foo", 2) == "",
+	after("foo", 3) == "",
+	after("foo", undef) == undef,
+      ]);
+echo([	"before:",
+	before("foo", -1) == "",
+	before("foo", 0) == "",
+	before("foo", 1) == "f",
+	before("foo", 2) == "fo",
+	before("foo", 3) == "foo",
+	before("foo", undef) == undef
+      ]);
+
+echo([	"between:",
+	between("bar", undef, undef) == undef,
+	between("bar", undef, 1) == undef,
+	between("bar", 1, undef) == undef,
+	between("bar", -1, 1) == "b",
+	between("bar", 1, 2) == "a",
+	between("bar", 1, 3) == "ar",
+	between("bar", 0, 2) == "ba",
+	between("bar", 1, 1) == "",
+	between("bar", -1, -1) == "",
+	between("bar", 3, 3) == "",
+	between("bar", 4, 4) == undef,
+	between("foobar", 2, 4)=="ob",
+	between("foobar", 4, 2) == undef,
+      ]);
+
+echo([	"substring:",
+	substring("foobar", 2, 2) == "ob",
+	substring("foobar", 2, undef) == "obar",
+	]);
+
+echo([	"join:",
+	join(["foo", "bar", "baz"], ", ") == "foo, bar, baz",
+	join(["foo", "bar", "baz"], "") == "foobarbaz",
+	join(["foo"], ",") == "foo",
+	join([], "") == "",
+	
+]);
+*echo(["lower:", lower("!@#$1234FOOBAR!@#$1234") == "!@#$1234foobar!@#$1234"]);
+*echo(["upper:", upper("!@#$1234foobar!@#$1234") == "!@#$1234FOOBAR!@#$1234"]);
+echo(["equals:", 
+	equals("foo", "bar") == false,
+	equals("foo", "foo") == true,
+	equals("foo", "FOo") == false,
+	equals("foo", "FOo", ignore_case=true) == true,
+	]);
+echo([	"starts_with:", 
+	starts_with("foobar", "foo"),
+	starts_with("foobar", "oo", 1)]);
+	
+echo(["ends_with:", ends_with("foobar", "bar")]);
+
+
+echo(["index_of", 	
+	index_of("foobar", "o") == 1,
+	index_of("foobar", "o", 1) == 2,
+	index_of("foobar", "o", -1) == undef,
+	index_of("foobar foobar", "oo")==1,
+	index_of("foobar foobar", "oo", 1)==8,
+	index_of("foobar", "Bar") == undef,
+	index_of("foobar", "Bar", ignore_case=true) == 3]);
+
+echo([	"split:",
+	split("", " ", 0) == "",
+	split(test, " ", -1) == undef,
+	split(test, " ", 0) == "foo",
+	split(test, " ", 1) == "",
+	split(test, " ", 2) == "(1,",
+	split(test, " ", 3) == "bar2)",
+	split(test, " ", 4) == undef,
+	split(test, " ", 5) == undef,
+	split("foo", " ") == "foo",
+]);
+
+echo(["replace", 	
+	replace("foobar", "oo", "ee") == "feebar",
+	replace("foobar foobar", "oo", "ee") == "feebar feebar",
+	replace("foobar", "OO", "ee", ignore_case=true) == "feebar",
+	replace("foobar foobar", "OO", "ee", ignore_case=true) == "feebar feebar",
+]);
+
+echo([	"token:",
+	token(" ", 0) == undef,
+	token(test, -1) == undef,
+	token(test, 0) == "foo",
+	token(test, 1) == "(",
+	token(test, 2) == "1",
+	token(test, 3) == ",",
+	token(test, 4) == "bar2",
+	token(test, 5) == ")",
+	token(test, 6) == undef,
+]);
+
+echo([	"_token_end:",
+	_token_end(" ", 0),
+	_token_end(test, 0) ==3,
+	_token_end(test, 3) ==6,
+	_token_end(test, 6) ==7,
+	_token_end(test, 7) ==8,
+	_token_end(test, 8) ==13,
+	_token_end(test, 13)==14,
+	_token_end(test, 14)==14,
+	]);
+
+echo([	"trim:",
+	trim(" foo ") == "foo",
+	trim(" foo") == "foo",
+	trim("foo ") == "foo",
+	trim("foo") == "foo",
+	trim("") == "",
+	trim(" ") == "",
+	trim("  ") == "",
+	trim(undef) == undef,
+]);
+
+echo([
+	"reverse:",
+	reverse("bar") == "rab",
+	reverse("ba") == "ab",
+	reverse("") == "",
+	reverse(undef) == undef,
+]);
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+echo([
+	"_match_parsed_rx:",
+	"literals",
+	//literals
+	_match_parsed_rx("foo", "f", 0) == 1,
+	_match_parsed_rx("f", "f", 0) == 1,
+	_match_parsed_rx("foo", "&fo", 0) == 2,
+	_match_parsed_rx("foo", "&fx", 0) == undef,
+	_match_parsed_rx("foo", "&xf", 0) == undef,
+	_match_parsed_rx("foo", "&xy", 0) == undef,
+	_match_parsed_rx("foo", "|fx", 0) == 1,
+	_match_parsed_rx("foo", "|xf", 0) == 1,
+	_match_parsed_rx("foo", "|xy", 0) == undef,
+	_match_parsed_rx("foo", "?x", 0) == 0,
+	_match_parsed_rx("foo", "?f", 0) == 1,
+	_match_parsed_rx("f", "*o", 0) == 0,
+	_match_parsed_rx("of", "*o", 0) == 1,
+	_match_parsed_rx("oof", "*o", 0) == 2,
+	_match_parsed_rx("oof", ["&","*o","f"], 0) == 3,
+	_match_parsed_rx("oooofaa", ["&","*o","f"], 0) == 5,
+	_match_parsed_rx("f", "+o", 0) == undef,
+	_match_parsed_rx("of", "+o", 0) == 1,
+	_match_parsed_rx("oof", "+o", 0) == 2,
+	_match_parsed_rx("oof", ["&","+o","f"], 0) == 3,
+	_match_parsed_rx("oooofaa", ["&","+o","f"], 0) == 5,
+	"wildcard",
+	//wildcard
+	_match_parsed_rx("FOO", ".", 0, 0, ignore_case=true) == 1,
+	_match_parsed_rx("F", "+.", 0, 0, ignore_case=true)==1,
+	"anchor",
+	//anchor
+	_match_parsed_rx("FOO", ["&", "^", "&fo"], 0, 0, ignore_case=true) == 2,
+	_match_parsed_rx(" FOO", ["&", "^", "&fo"], 1, 0, ignore_case=true) == undef,
+	_match_parsed_rx("FOO", ["&", "f", ["&", "o", "&o$"]], 0, 0, ignore_case=true) == 3,
+	_match_parsed_rx("FOO ", ["&", "f", ["&", "o", "&o$"]], 0, 0, ignore_case=true) == undef,
+	"edge cases",
+	//edge cases
+	_match_parsed_rx("F", "f", 0, 0, ignore_case=true)==1,
+	_match_parsed_rx(undef, "f", 0, 0, ignore_case=true)==undef,
+	_match_parsed_rx("F", undef, 0, 0, ignore_case=true)==undef,
+	
+	_match_parsed_rx("f", ["[", [["-", "a", "z"], []]], 0) ==1,
+	_match_parsed_rx("o", ["[", [["-", "a", "z"], []]], 0) ==1,
+	_match_parsed_rx("g", ["[", [["-", "a", "z"], []]], 0) ==1,
+	_match_parsed_rx("0", "\\d", 0) ==1,
+	_match_parsed_rx("a", "\\d", 0) ==1,
+	
+]);
+
+
+echo([
+	"_match_regex",
+	_match_regex("foobarbaz", "[foba]{2,5}") == 5,
+	_match_regex("foobarbaz", "[foba]{6,10}") == undef,
+	_match_regex("foobarbaz", "[fobar]{2,6}") == 6,
+	_match_regex("foobarbaz", "[fobar]{2,10}") == 8,
+	_match_regex("foobarbaz", "[a-z]*") == 9,
+	_match_regex("foobarbaz", "[f-o]*") == 3,
+]);
+
+echo([
+	"regex:",
+	contains("foo bar baz", "ba[rz]", regex=true) == true,
+	contains("foo bar baz", "spam", regex=true) == false,
+	index_of("foo bar baz", "ba[rz]", regex=true) == [4,7],
+	index_of("foo bar baz", "ba[rz]", 1, regex=true) == [8,11],
+	grep("foo bar baz", "ba[rz]", regex=true) == "bar",
+	grep("foo bar baz", "ba[rz]", 1, regex=true) == "baz",
+	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d", regex=true), 
+	replace("foo bar baz", "ba[rz]", "spam", regex=true) == "foo spam spam",
+	split(regex_test, "fo+", 0, regex=true) == "",
+	split(regex_test, "fo+", 1, regex=true) == "baz",
+	split(regex_test, "fo+", 2, regex=true) == "barbaz",
+	split(regex_test, "fo+", 3, regex=true) == undef,
+	split("bazfoobar", "fo+", 0, regex=true) == "baz",
+	split("bazfoobar", "fo+", 1, regex=true) == "bar",
+	split("bazfoobar", "fo+", 2, regex=true) == undef,
+	split("", "fo+", 0, regex=true) == "",
+	split("", "fo+", 1, regex=true) == undef,
+	
+	contains("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == true,
+	contains("foo bar baz", "SPAM", regex=true, ignore_case=true) == false,
+	index_of("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == [4,7],
+	index_of("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == [8,11],
+	grep("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == "bar",
+	grep("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == "baz",
+	replace("foo bar baz", "BA[RZ]", "spam", regex=true, ignore_case=true) == "foo spam spam",
+	split(regex_test, "FO+", 0, regex=true, ignore_case=true) == "",
+	split(regex_test, "FO+", 1, regex=true, ignore_case=true) == "baz",
+	split(regex_test, "FO+", 2, regex=true, ignore_case=true) == "barbaz",
+	split(regex_test, "FO+", 3, regex=true, ignore_case=true) == undef,
+]);
+
+
+echo([
+	"_parse_rx:",
+	//order of operations: binary
+	//_parse_rx("A+B^C", "^+") ,
+	//_parse_rx("A+B^C", "+^") ,
+	//_parse_rx("(A+B^C)*D+E^5", "^*/+-") ,
+	//order of operations: unary+binary
+	_parse_rx("a?") == ["?", "a"],
+	_parse_rx("ab?") == ["&", "a", ["?", "b"]],
+	_parse_rx("(ab)?") == ["?", ["&", "a", "b"]],
+	_parse_rx("a|b?") ==  ["|", "a", ["?", "b"]],
+	_parse_rx("(a|b)?") ==  ["?", ["|", "a", "b"]],
+	_parse_rx("a|bc") ==  ["|", "a", ["&", "b", "c"]],
+	_parse_rx("ab|c") == ["|", ["&", "a", "b"], "c"],
+	_parse_rx("(a|b)c") == ["&", ["|", "a", "b"], "c"],
+	_parse_rx("a|(bc)") == ["|", "a", ["&", "b", "c"]],
+	_parse_rx("a?|b*c+") == ["|",["?","a"],["&",["*","b"],["+", "c"]]],
+	
+	//escape characters
+	_parse_rx("\\d?") ==  ["?", "\\d"],
+	_parse_rx("\\s\\d?") == ["&", "\\s", ["?", "\\d"]],
+	_parse_rx("\\d?|b*\\d+") == ["|",["?","\\d"],["&",["*","b"],["+","\\d"]]],
+	_parse_rx("a|\\(bc\\)") == ["|","a",["&",["&",["&","\\(","b"],"c"],"\\)"]],
+	_parse_rx("a?|b*c+d|d*e+") == 
+	["|", 
+		["|", 
+			["?", "a"], 
+			["&", ["&", ["*", "b"], ["+", "c"]], "d"]], 
+		["&", ["*", "d"], ["+", "e"]]
+	],
+	//invalid syntax
+	_parse_rx("((()))"),
+	_parse_rx( "(()))"),
+	_parse_rx("((())"),
+	_parse_rx("a?*+"),
+	//edge cases
+	_parse_rx("a") == "a",
+	_parse_rx(""),
+	_parse_rx(undef) == undef,
+	_parse_rx("foo") == ["&", ["&", "f", "o"], "o"], 
+	//variable repetition
+	_parse_rx(".{3}") == ["{", 
+		".", 
+		["3", []]
+	], 
+	_parse_rx(".{3,5}") == ["{",
+		 ".", 
+		 ["5", 
+			["3", []]]
+	], 
+	//charsets
+	_parse_rx(".[abcdef]") == ["&",
+		 ".", 
+		 ["[", 
+			["f", ["e", ["d", ["c", ["b", ["a", []]]]]]]
+		 ]
+	], 
+	_parse_rx("[a-z]") == ["[", [["-", "a", "z"], []]],
+	
+	_parse_rx("\\d"),
+	_parse_rx("\\d\\d\\d-?\\d\\d\\d\\d"),
+]);
+
+echo([
+]);
