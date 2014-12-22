@@ -1,4 +1,5 @@
 include <strings.scad>
+echo("relativity.scad 2014.12.22");
 
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
@@ -57,7 +58,12 @@ module mirrored(axes=[0,0,0]){
 		children();
 }
 
-module hulled(class=""){
+module hide(class="*"){
+	assign($show=_push($show, ["not", _sizzle_parse(class)]))
+	children();
+}
+
+module hulled(class="*"){
 	hull()
 	assign($show=_push($show, _sizzle_parse(class)))
 	children();
@@ -67,35 +73,35 @@ module hulled(class=""){
 
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
-module differed(positive, negative, neutral=undef){
+module differed(positive, negative, unaffected=undef){
 	assign(	positive = _sizzle_parse(positive),
 		negative = _sizzle_parse(negative) )
-	assign( neutral = neutral != undef? 
-		neutral : ["not", ["or", positive, negative]]){
+	assign( unaffected = unaffected != undef? 
+		unaffected : ["not", ["or", positive, negative]]){
 		difference(){
 			assign($show=_push($show, positive))
 				children();
 			assign($show=_push($show, negative))
 				children();
 		}
-		assign($show=_push($show, neutral))
+		assign($show=_push($show, unaffected))
 			children();
 	}
 }
 
 // performs the intersection on a list of object classes
-module intersected(class1, class2, neutral=undef){
+module intersected(class1, class2, unaffected=undef){
 	assign(	class1 = _sizzle_parse(class1),
 		class2 = _sizzle_parse(class2))
-	assign( neutral = neutral != undef? 
-		neutral : ["not", ["or", class1, class2]]){
+	assign( unaffected = unaffected != undef? 
+		unaffected : ["not", ["or", class1, class2]]){
 		intersection(){
 			assign($show=_push($show, class1))
 				children();
 			assign($show=_push($show, class2))
 				children();
 		}
-		assign($show=_push($show, neutral))
+		assign($show=_push($show, unaffected))
 			children();
 	}
 }
