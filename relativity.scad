@@ -1,3 +1,5 @@
+include <strings.scad>
+
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -26,8 +28,7 @@ $parent_type="space";
 
 //inhereted properties common to all geometric primitives in relativity.scad
 // indicates the class(es) to render
-$show = "";
-$hide = "";
+$show = "*";
 // indicates the class that is either assigned-to or inherited-by an object
 $class = "";
 
@@ -57,9 +58,9 @@ module mirrored(axes=[0,0,0]){
 }
 
 module hulled(class=""){
-	if(_has_token($class, $show))
+	if(_sizzle_engine($class, $show))
 	hull()
-	assign($show=class)
+	assign($show=_sizzle_parse(class))
 	children();
 
 	children();
@@ -67,25 +68,35 @@ module hulled(class=""){
 
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
-module differed(positive, negative){
-	if(_has_token($class, $show))
-	difference(){
-		assign($show=positive)
-			children();
-		assign($show=negative)
+module differed(positive, negative, neutral=undef){
+	if(_sizzle_engine($class, $show))
+	assign(	positive = _sizzle_parse(positive),
+		negative = _sizzle_parse(negative) )
+	assign( neutral = neutral != undef? 
+		neutral : ["not", ["or", positive, negative]]){
+		difference(){
+			assign($show=positive)
+				children();
+			assign($show=negative)
+				children();
+		}
+		assign($show=neutral)
 			children();
 	}
 }
 
 // performs the intersection on a list of object classes
-module intersected(class=""){
-	if(_has_token($class, $show))
+module intersected(class1, class2){
+	if(_sizzle_engine($class, $show))
 	intersection(){
-		assign($show=positive)
+		assign($show=_sizzle_parse(class1))
 			children();
-		assign($show=negative)
+		assign($show=_sizzle_parse(class2))
 			children();
 	}
+	assign($show=
+		["not", ["or", _sizzle_parse(class1), _sizzle_parse(class2)]])
+		children();
 }
 
 // like translate(), but use positions relative to the size of the parent object
@@ -133,7 +144,7 @@ module box(size, anchor=$inward) {
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, size)/2)
-			if(_has_token($class, $show)) cube(size, center=true);
+			if(_sizzle_engine($class, $show)) cube(size, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -159,7 +170,7 @@ module rod(size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
-			if(_has_token($class, $show))
+			if(_sizzle_engine($class, $show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
@@ -185,7 +196,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$inward=center, 
 			$outward=center ){
 		translate(-hammard(anchor, size)/2)
-			if(_has_token($class, $show)) resize(size) sphere(d=size.x, center=true);
+			if(_sizzle_engine($class, $show)) resize(size) sphere(d=size.x, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -216,172 +227,79 @@ function _orient_angles(zaxis)=
 				[-asin(zaxis.y / norm(zaxis)),
 		  		 atan2(zaxis.x, zaxis.z),
 		  		 0];
-
-// string functions
-
-
-// string functions
-function _css_select_all(tag, class, id, selectors, index=0) = 
-	token(selectors, " ", index) == undef?		
-		true
-	: _css_select(string, token(tokens, token_seperator, index)) ?	
-		_css_select_all(tag, class, id, selectors, index+1)
-	: 
-		false
-	;
 	
-function _css_select(tag, class, id, selector, index=0) = 
-	selector == "*"?
+//echo(_sizzle_engine("", "baz", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
+//echo(_sizzle_engine("", "foo", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
+//echo(_sizzle_engine("", "bar", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
+function _sizzle_engine(class, sizzle) = 
+	//is sizzle empty?
+	len(sizzle) <= 0?
 		true
-	: starts_with(selector, "#") ?
-		id == after(selector, "#")
-	: starts_with(selector, ".") ?
-		_has_token(class, after(selector, ".")) ?
-	: starts_with(selector, "*")
-		id == after(selector, "#") || _has_token(class, after(selector, ".")) || tag == selector
-	: 
-		tag == selector
-	;
-//echo(_has_all_tokens("foo bar baz", "foo baz"));
-//echo(_has_all_tokens("foo bar baz", "spam baz"));
-function _has_all_tokens(string, tokens, string_seperator=" ", token_seperator=" ", index=0) = 
-	token(tokens, token_seperator, index) == undef?		
-		true						
-	: _has_token(string, token(tokens, token_seperator, index), string_seperator) ?	
-		_has_all_tokens(string, tokens, string_seperator, token_seperator, index+1)		
-	: 
-		false
+	//is sizzle a string?
+	: sizzle == str(sizzle)?
+		class == sizzle || sizzle == "*"
+	//is sizzle[0] a parse tree?
+	: sizzle[0] != str(sizzle[0])?
+		_sizzle_engine(class, sizzle[0]) && _sizzle_engine(class,  _pop(sizzle))
+	//is sizzle a known operator?
+	: sizzle[0] == "or"?
+		_sizzle_engine(class, sizzle[1]) || _sizzle_engine(class, sizzle[2])
+	: sizzle[0] == "not"?
+		!_sizzle_engine(class, _pop(sizzle))
+	: //otherwise, sizzle is an "and" statement
+		_sizzle_engine(class, sizzle[0]) && _sizzle_engine(class, _pop(sizzle))
 	;
 
-//echo(_has_any_tokens("foo bar baz", "spam baz"));
-function _has_any_tokens(string, tokens, seperator=",", index=0) = 
-	token(tokens, seperator, index) == undef?		//no more tokens?
-		false						//then there's no 
-	: _has_token(string, token(tokens, " ", index), " ") ?	//matches
-		true						//then 
-	: 
-		_has_any_tokens(string, tokens, seperator, index+1)//otherwise, try the next token
-	;
+function _sizzle_parse(sizzle) = 
+	_sizzle_DFA(
+		_stack_tokenize(sizzle)
+	);
 
-//echo(_has_token("foo bar baz", "baz"));
-function _has_token(string, token, seperator=" ", index=0) = 		
-	token(string, seperator, index) == token ? 		//match?
-		true						//then I guess we found a token		
-	: after(string, seperator, index) == undef ? 		//no more tokens?
-		false						//then I guess there aren't any matches
-	:							
-		_has_token(string, token, seperator, index+1)	//otherwise, try again
-	;
-
-//echo(token("foo bar baz  ", " ", 0) == "foo");
-//echo(token("foo","", 2));
-function token(string, seperator=" ", index=0, ignore_case = false) = 
-	index < 0?
-		undef
+//echo(_sizzle_DFA(_stack_tokenize("not(foo,bar)")));
+//simulates a deterministic finite automaton that parses tokenized sizzle strings
+function _sizzle_DFA(in, ops=[], args=[]) = 
+	len(in) <= 0?
+		len(ops) <= 0?
+			args[0]
+		:
+			_sizzle_DFA(in,		_pop(ops),		_push_sizzle_op(args, ops[0]))
+	:in[0] == "not"?
+			_sizzle_DFA(_pop(in),	_push(ops, "not"),	args)
+	:in[0] == ","?
+			_sizzle_DFA(_pop(in),	_push(ops, "or"),	args)
+	:in[0] == "("?
+			_sizzle_DFA(_pop(in),	_push(ops, "("),	args)
+	:in[0] == ")"?
+		ops[0] == "("?
+			_sizzle_DFA(_pop(in),	_pop(ops),		args)
+		:
+			_sizzle_DFA(in,		_pop(ops),		_push_sizzle_op(args, ops[0]))
 	:
-		before(after(string, 	seperator, index-1, ignore_case), 
-					seperator, 0, ignore_case);
+			_sizzle_DFA(_pop(in),	ops,			_push(args, in[0]))
+	;
+function _push_sizzle_op(args, op) = 
+	op == "or"?
+		_push(
+			_pop(args, 2),
+			[op, args[0], args[1][0]]
+		)
+	:			//unary
+		_push(
+			_pop(args),
+			[op, args[0]]
+		)
+	;
 
-//echo(replace("foobar spam nOOb", "OO", "u", ignore_case=true));
-function replace(string, replaced, replacement, ignore_case=false) = 
-	find(string, replaced, ignore_case=ignore_case) != undef?
-		replace(_replace(string, replaced, replacement, ignore_case),
-					 replaced, replacement, ignore_case)
+
+//returns a stack representing the tokenization of an input string
+//stacks are used due to limitations in OpenSCAD when processing lists
+//stacks are represented through nested right associative lists
+//echo(_stack_tokenize("not(foo)"));
+//echo(_stack_tokenize("foo bar baz  "));
+function _stack_tokenize(string, pos=0) = 
+	pos >= len(string)?
+		[]
 	:
-		string
-	;
-function _replace(string, replaced, replacement, ignore_case=false) = 
-	str(	before(string, replaced, ignore_case=ignore_case), 
-		replacement, 
-		after(string, replaced, ignore_case=ignore_case));
-
-//echo(before("foo bar baz", index=0));
-//echo(before("foo", "", 3));
-function before(string, seperator=" ", index=0, ignore_case=false) = 
-	string == undef?
-		undef
-	: index < 0?
-		undef
-	: find(string, seperator, index, ignore_case) != undef?
-		substring(string, 0, find(string, seperator, index, ignore_case))
-	:
-		string
-	;
-//echo(after("foo bar baz", index=0));
-//echo(after("bar", "",3));
-function after(string, seperator=" ", index=0, ignore_case=false) =
-	string == undef?
-		undef
-	: index < 0?
-		string
-	: find(string, seperator, index, ignore_case) != undef ?
-		substring(string, find(string, seperator, index, ignore_case) + len(seperator))
-	:
-		undef
-	;
-
-function contains(this, that, ignore_case=false) = 
-	find(this, that, ignore_case=ignore_case) != undef;
-
-//function sed(string, regex, replacement) = 
-//function grep(string, regex, index=0)=
-
-//echo(find("foo", "", 2));
-function find(string, goal, index=0, ignore_case=false) = 
-	string == ""?
-		undef
-	: len(goal) == 0 && index >= len(string)?
-		undef
-	: len(goal) == 1 && !ignore_case?
-		search(goal, string, 0)[0][index]
-	: starts_with(string, goal, ignore_case)?
-		index
-	: 
-		find(substring(string, 1), goal, index+1, ignore_case)
-	;
-
-//echo(starts_with("", ""));
-function starts_with(string, start, ignore_case=false) = 
-	equals(	substring(string, 0, len(start)), 
-		start, 
-		ignore_case=ignore_case);
-
-function ends_with(string, end, ignore_case=false) =
-	equals(	substring(string, len(string)-len(end)), 
-		end, 
-		ignore_case=ignore_case);
-
-function equals(this, that, ignore_case=false) =
-	ignore_case?
-		lower(this) == lower(that)
-	:
-		this==that
-	;
-
-//echo(lower("!@#$1234FOOBAR!@#$1234"));
-//echo(upper("!@#$1234foobar!@#$1234"));
-function lower(string) = 
-	_transform_case(string, search(string, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0), 97);
-function upper(string) = 
-	_transform_case(string, search(string, "abcdefghijklmnopqrstuvwxyz",0), 65);
-function _transform_case(string, encoded, offset, index=0) = 
-	index >= len(string)?
-		""
-	: len(encoded[index]) <= 0?
-		str(substring(string, index, 1),	_transform_case(string, encoded, offset, index+1))
-	: 
-		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
-	;
-	
-function substring(string, start, length=undef) = 
-	length == undef? 
-		_substring(string, start, len(string)) 
-	: 
-		_substring(string, start, length+start)
-	;
-function _substring(string, start, end) = 
-	start==end ? 
-		"" 
-	: 
-		str(string[start], _substring(string, start+1, end))
+		[between(string, _token_start(string, pos), _token_end(string, pos)), 
+		 _stack_tokenize(string, _token_end(string, pos))]
 	;
