@@ -58,7 +58,7 @@ module mirrored(axes=[0,0,0]){
 }
 
 module hulled(class=""){
-	if(_sizzle_engine($class, $show))
+	if(_matches_sizzle($class, $show))
 	hull()
 	assign($show=_sizzle_parse(class))
 	children();
@@ -69,7 +69,7 @@ module hulled(class=""){
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
 module differed(positive, negative, neutral=undef){
-	if(_sizzle_engine($class, $show))
+	if(_matches_sizzle($class, $show))
 	assign(	positive = _sizzle_parse(positive),
 		negative = _sizzle_parse(negative) )
 	assign( neutral = neutral != undef? 
@@ -86,17 +86,21 @@ module differed(positive, negative, neutral=undef){
 }
 
 // performs the intersection on a list of object classes
-module intersected(class1, class2){
-	if(_sizzle_engine($class, $show))
-	intersection(){
-		assign($show=_sizzle_parse(class1))
-			children();
-		assign($show=_sizzle_parse(class2))
+module intersected(class1, class2, neutral=undef){
+	if(_matches_sizzle($class, $show))
+	assign(	class1 = _sizzle_parse(class1),
+		class2 = _sizzle_parse(class2))
+	assign( neutral = neutral != undef? 
+		neutral : ["not", ["or", class1, class2]]){
+		intersection(){
+			assign($show=class1)
+				children();
+			assign($show=class2)
+				children();
+		}
+		assign($show=neutral)
 			children();
 	}
-	assign($show=
-		["not", ["or", _sizzle_parse(class1), _sizzle_parse(class2)]])
-		children();
 }
 
 // like translate(), but use positions relative to the size of the parent object
@@ -144,7 +148,7 @@ module box(size, anchor=$inward) {
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, size)/2)
-			if(_sizzle_engine($class, $show)) cube(size, center=true);
+			if(_matches_sizzle($class, $show)) cube(size, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -170,7 +174,7 @@ module rod(size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
-			if(_sizzle_engine($class, $show))
+			if(_matches_sizzle($class, $show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
@@ -196,7 +200,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$inward=center, 
 			$outward=center ){
 		translate(-hammard(anchor, size)/2)
-			if(_sizzle_engine($class, $show)) resize(size) sphere(d=size.x, center=true);
+			if(_matches_sizzle($class, $show)) resize(size) sphere(d=size.x, center=true);
 		translate(-hammard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -227,6 +231,9 @@ function _orient_angles(zaxis)=
 				[-asin(zaxis.y / norm(zaxis)),
 		  		 atan2(zaxis.x, zaxis.z),
 		  		 0];
+				 
+function _matches_sizzle(classes, sizzle) = 
+	_sizzle_engine(_stack_tokenize(classes), sizzle);
 	
 //echo(_sizzle_engine("", "baz", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
 //echo(_sizzle_engine("", "foo", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
@@ -237,10 +244,7 @@ function _sizzle_engine(class, sizzle) =
 		true
 	//is sizzle a string?
 	: sizzle == str(sizzle)?
-		class == sizzle || sizzle == "*"
-	//is sizzle[0] a parse tree?
-	: sizzle[0] != str(sizzle[0])?
-		_sizzle_engine(class, sizzle[0]) && _sizzle_engine(class,  _pop(sizzle))
+		_has_token(class, sizzle) || sizzle == "*"
 	//is sizzle a known operator?
 	: sizzle[0] == "or"?
 		_sizzle_engine(class, sizzle[1]) || _sizzle_engine(class, sizzle[2])
@@ -289,7 +293,16 @@ function _push_sizzle_op(args, op) =
 			[op, args[0]]
 		)
 	;
-
+//echo(_has_token(_stack_tokenize("foo bar baz"), "baz"));
+function _has_token(tokens, token) = 
+	len(tokens) <= 0?
+		false
+	: tokens[0] == token?
+		true
+	: 
+		_has_token(_pop(tokens), token)
+	;
+		
 
 //returns a stack representing the tokenization of an input string
 //stacks are used due to limitations in OpenSCAD when processing lists
