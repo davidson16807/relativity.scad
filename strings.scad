@@ -3,6 +3,7 @@ _lowercase = "abcdefghijklmnopqrstuvwxyz";
 _uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 _letter = str(_lowercase, _uppercase);
 _alphanumeric = str(_letter, _digit);
+_variable_safe = str(_alphanumeric, "_");
 _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
 
@@ -453,11 +454,11 @@ function _token_start(string, pos=0, ignore_space=true) =
 	;
 	
 
-function _token_end(string, pos=0, ignore_space=true, tokenize_quotes=true) = 
+function _token_end(string, pos=0, token_characters=_variable_safe, ignore_space=true, tokenize_quotes=true) = 
 	pos >= len(string)?
 		len(string)
-	: _is_in(string[pos], _alphanumeric) ?
-		_match_set(string, _alphanumeric, pos)
+	: _is_in(string[pos], token_characters) ?
+		_match_set(string, token_characters, pos)
 	: _is_in(string[pos], _whitespace) ? (
 		ignore_space?
 			_token_end(string, _match_set(string, _whitespace, pos))
