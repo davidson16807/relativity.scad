@@ -319,6 +319,10 @@ function _stack_tokenize(string, pos=0) =
 	pos >= len(string)?
 		[]
 	:
-		[between(string, _token_start(string, pos), _token_end(string, pos)), 
-		 _stack_tokenize(string, _token_end(string, pos))]
+		_push(	
+			_stack_tokenize(string, _token_end(string, pos)),
+			between(string, 
+				_token_start(string, pos), 
+				_token_end(string, pos, token_characters=str(_alphanumeric, "_-")))
+		)
 	;
