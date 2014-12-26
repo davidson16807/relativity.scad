@@ -1,5 +1,12 @@
 include <strings.scad>
-echo("relativity.scad 2014.12.22");
+echo("relativity.scad 2014.12.26");
+if(version_num() < 20140300)
+	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
+function relativity_version() =
+	[2014, 12, 26];
+function relativity_version_num() = 
+	20141226;
+
 
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
