@@ -1,5 +1,15 @@
 include <strings.scad>
-echo("relativity.scad 2014.12.22");
+echo("relativity.scad 2014.12.26");
+
+if(version_num() < 20140300)
+	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
+if(strings_version_num() < 20141226)
+	echo("WARNING: strings.scad is out of date, please update at http://www.thingiverse.com/thing:349943");
+function relativity_version() =
+	[2014, 12, 26];
+function relativity_version_num() = 
+	20141226;
+
 
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
@@ -320,7 +330,7 @@ function _stack_tokenize(string, pos=0) =
 		[]
 	:
 		_push(	
-			_stack_tokenize(string, _token_end(string, pos)),
+			_stack_tokenize(string, _token_end(string, pos, token_characters=str(_alphanumeric, "_-"))),
 			between(string, 
 				_token_start(string, pos), 
 				_token_end(string, pos, token_characters=str(_alphanumeric, "_-")))
