@@ -68,6 +68,11 @@ module mirrored(axes=[0,0,0]){
 		children();
 }
 
+module show(class="*"){
+	assign($show=_push($show, _sizzle_parse(class)))
+	children();
+}
+
 module hide(class="*"){
 	assign($show=_push($show, ["not", _sizzle_parse(class)]))
 	children();
