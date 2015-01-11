@@ -1,5 +1,5 @@
 include <strings.scad>
-echo("relativity.scad 2014.12.26");
+echo("relativity.scad 2015.1.10");
 
 if(version_num() < 20140300)
 	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
@@ -79,8 +79,9 @@ module hide(class="*"){
 }
 
 module hulled(class="*"){
+	if(_matches_sizzle($class, $show)) 
 	hull()
-	assign($show=_push($show, _sizzle_parse(class)))
+	assign($show=_sizzle_parse(class))
 	children();
 
 	children();
@@ -89,17 +90,17 @@ module hulled(class="*"){
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
 module differed(positive, negative, unaffected=undef){
-	assign(	positive = _sizzle_parse(positive),
-		negative = _sizzle_parse(negative) )
-	assign( unaffected = unaffected != undef? 
-		unaffected : ["not", ["or", positive, negative]]){
+	assign(	_positive = _sizzle_parse(positive) )
+	assign( _negative = _sizzle_parse(negative) )
+	assign( _unaffected = unaffected != undef? 
+		_sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]]){
 		difference(){
-			assign($show=_push($show, positive))
+			assign($show=_push($show, _positive))
 				children();
-			assign($show=_push($show, negative))
+			assign($show=_push($show, _negative))
 				children();
 		}
-		assign($show=_push($show, unaffected))
+		assign($show=_push($show, _unaffected))
 			children();
 	}
 }
@@ -163,6 +164,7 @@ module box(size, anchor=$inward) {
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
+			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$inward=center, 
 			$outward=center){
 		translate(-hammard(anchor, size)/2)
@@ -215,6 +217,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
+			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$inward=center, 
 			$outward=center ){
 		translate(-hammard(anchor, size)/2)
