@@ -1,5 +1,5 @@
 include <strings.scad>
-echo("relativity.scad 2015.1.10");
+echo("relativity.scad 2015.1.17");
 
 if(version_num() < 20140300)
 	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
@@ -48,23 +48,33 @@ function hammard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
 // form repeating patterns through translation
-module translated(offset, n=[1]){
+module translated(offset, n=[1], class="*"){
+	show(class)
 	for(i=n)
 		translate(offset*i)
 			children();
+	hide(class)
+		children();
 }
 
 // form radially symmetric objects around the z axis
-module rotated(offset, n=[1]){
+module rotated(offset, n=[1], class="*"){
+	show(class)
 	for(i=n)
 		rotate(offset*i)
 			children();
+	hide(class)
+		children();
 }
 
 // form bilaterally symmetric objects using the mirror() function
-module mirrored(axes=[0,0,0]){
+module mirrored(axes=[0,0,0], class="*"){
+	show(class)
 	mirror(axes)
 		children();
+	show(class)
+		children();
+	hide(class)
 		children();
 }
 
@@ -79,17 +89,18 @@ module hide(class="*"){
 }
 
 module hulled(class="*"){
-	if(_matches_sizzle($class, $show)) 
+	if(_matches_sizzle($class, $show))
 	hull()
 	assign($show=_sizzle_parse(class))
 	children();
-
+	
+	hide(class)
 	children();
 }
 
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
-module differed(positive, negative, unaffected=undef){
+module differed(negative, positive="*", unaffected=undef){
 	assign(	_positive = _sizzle_parse(positive) )
 	assign( _negative = _sizzle_parse(negative) )
 	assign( _unaffected = unaffected != undef? 
