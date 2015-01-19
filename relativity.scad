@@ -1,15 +1,12 @@
 include <strings.scad>
-echo("relativity.scad 2015.1.17");
+function relativity_version() =
+	[2014, 1, 19];
+function relativity_version_num() = 
+	relativity_version().x * 10000 + relativity_version().y * 100 + relativity_version().z;
+echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y, ".", relativity_version().z));
 
 if(version_num() < 20140300)
 	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
-if(strings_version_num() < 20141226)
-	echo("WARNING: strings.scad is out of date, please update at http://www.thingiverse.com/thing:349943");
-function relativity_version() =
-	[2014, 12, 26];
-function relativity_version_num() = 
-	20141226;
-
 
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
@@ -105,10 +102,11 @@ module differed(negative, positive="*", unaffected=undef){
 	assign( _negative = _sizzle_parse(negative) )
 	assign( _unaffected = unaffected != undef? 
 		_sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]]){
+		if(_matches_sizzle($class, $show))
 		difference(){
-			assign($show=_push($show, _positive))
+			assign($show = _positive)
 				children();
-			assign($show=_push($show, _negative))
+			assign($show = _negative)
 				children();
 		}
 		assign($show=_push($show, _unaffected))
@@ -122,10 +120,11 @@ module intersected(class1, class2, unaffected=undef){
 		class2 = _sizzle_parse(class2))
 	assign( unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]]){
+		if(_matches_sizzle($class, $show))
 		intersection(){
-			assign($show=_push($show, class1))
+			assign($show = class1)
 				children();
-			assign($show=_push($show, class2))
+			assign($show = class2)
 				children();
 		}
 		assign($show=_push($show, unaffected))
