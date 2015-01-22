@@ -40,8 +40,8 @@ $show = "*";
 // indicates the class that is either assigned-to or inherited-by an object
 $class = "";
 
-//hammard product (aka "component-wise" product) for vectors
-function hammard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
+//hadamard product (aka "component-wise" product) for vectors
+function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 
 // form repeating patterns through translation
@@ -138,7 +138,7 @@ module align(anchors){
 	assign(anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors)
 	for(anchor=anchors)
 	{
-		translate(hammard(anchor, $parent_bounds)/2)
+		translate(hadamard(anchor, $parent_bounds)/2)
 		assign($outward = anchor, $inward = -anchor)
 			children();
 	}
@@ -177,9 +177,9 @@ module box(size, anchor=$inward) {
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$inward=center, 
 			$outward=center){
-		translate(-hammard(anchor, size)/2)
+		translate(-hadamard(anchor, size)/2)
 			if(_matches_sizzle($class, $show)) cube(size, center=true);
-		translate(-hammard(anchor, $parent_bounds)/2)
+		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -203,13 +203,13 @@ module rod(size=[1,1,1],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
 			$inward=center, 
 			$outward=center){
-		translate(-hammard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
+		translate(-hadamard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
 			if(_matches_sizzle($class, $show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
 		}
-		translate(-hammard(anchor, $parent_bounds)/2)
+		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -230,9 +230,9 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$inward=center, 
 			$outward=center ){
-		translate(-hammard(anchor, size)/2)
+		translate(-hadamard(anchor, size)/2)
 			if(_matches_sizzle($class, $show)) resize(size) sphere(d=size.x, center=true);
-		translate(-hammard(anchor, $parent_bounds)/2)
+		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
