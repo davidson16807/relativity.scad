@@ -36,7 +36,7 @@ $parent_type="space";
 
 //inhereted properties common to all geometric primitives in relativity.scad
 // indicates the class(es) to render
-$show = "*";
+$_show = "*";
 // indicates the class that is either assigned-to or inherited-by an object
 $class = "";
 
@@ -76,19 +76,19 @@ module mirrored(axes=[0,0,0], class="*"){
 }
 
 module show(class="*"){
-	assign($show=_push($show, _sizzle_parse(class)))
+	assign($_show=_push($_show, _sizzle_parse(class)))
 	children();
 }
 
 module hide(class="*"){
-	assign($show=_push($show, ["not", _sizzle_parse(class)]))
+	assign($_show=_push($_show, ["not", _sizzle_parse(class)]))
 	children();
 }
 
 module hulled(class="*"){
-	if(_matches_sizzle($class, $show))
+	if(_matches_sizzle($class, $_show))
 	hull()
-	assign($show=_sizzle_parse(class))
+	assign($_show=_sizzle_parse(class))
 	children();
 	
 	hide(class)
@@ -102,14 +102,14 @@ module differed(negative, positive="*", unaffected=undef){
 	assign( _negative = _sizzle_parse(negative) )
 	assign( _unaffected = unaffected != undef? 
 		_sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]]){
-		if(_matches_sizzle($class, $show))
+		if(_matches_sizzle($class, $_show))
 		difference(){
-			assign($show = _positive)
+			assign($_show = _positive)
 				children();
-			assign($show = _negative)
+			assign($_show = _negative)
 				children();
 		}
-		assign($show=_push($show, _unaffected))
+		assign($_show=_push($_show, _unaffected))
 			children();
 	}
 }
@@ -120,14 +120,14 @@ module intersected(class1, class2, unaffected=undef){
 		class2 = _sizzle_parse(class2))
 	assign( unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]]){
-		if(_matches_sizzle($class, $show))
+		if(_matches_sizzle($class, $_show))
 		intersection(){
-			assign($show = class1)
+			assign($_show = class1)
 				children();
-			assign($show = class2)
+			assign($_show = class2)
 				children();
 		}
-		assign($show=_push($show, unaffected))
+		assign($_show=_push($_show, unaffected))
 			children();
 	}
 }
@@ -178,7 +178,7 @@ module box(size, anchor=$inward) {
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, size)/2)
-			if(_matches_sizzle($class, $show)) cube(size, center=true);
+			if(_matches_sizzle($class, $_show)) cube(size, center=true);
 		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -204,7 +204,7 @@ module rod(size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
-			if(_matches_sizzle($class, $show))
+			if(_matches_sizzle($class, $_show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
@@ -231,7 +231,7 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			$inward=center, 
 			$outward=center ){
 		translate(-hadamard(anchor, size)/2)
-			if(_matches_sizzle($class, $show)) resize(size) sphere(d=size.x, center=true);
+			if(_matches_sizzle($class, $_show)) resize(size) sphere(d=size.x, center=true);
 		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
