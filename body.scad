@@ -3,126 +3,165 @@ inch = 25.4;
 foot = 12*inch;
 height = 5*foot+10*inch;
 unit = height/11;
+eye = 1/5*unit;
 assign($fn=10)
+skeleton();
 
+module skin(){
+	skeleton();
 
-hulled("cranium, forehead, jaw, chin")
-hulled("pubis, ilium")
-mirrored(y, class="*")//
-hulled("ribs", $class="ribs")
-hulled("thigh", $class="thigh") 
-hulled("fibula", $class="fibula")
-hulled("tibia", $class="tibia")
-hulled("foot", $class="foot")
-hulled("shoulderblade", $class="shoulderblade")
-hulled("collarbone", $class="collarbone")
-hulled("humerus", $class="humerus")
-hulled("forearm", $class="forearm")
-ball(d=unit, $class="cranium"){
-	translate(1/4*unit*x)
-	ball(d=unit, $class="forehead");
+	mirrored(y)
+	hulled()
+	mirrored(y, class="pubis, ilium")
+	show("shoulderblade, ribs, pubis, ilium")
+	model();
+
+	hulled()
+	show("collarbone")
+	body();
+}
+
+module muscle(){
 	
-	align(bottom)
-	box([1/2*unit, 2/3*unit, 1/4*unit], anchor=-x+z, $class="jaw")
-	align(x-z)
-	ball(d=1/4*unit, anchor=-x+z, orientation=x, $class="chin")
-	;
+}
 
-	*align(bottom)
-	rod(d=1/3*unit, h=unit, $class="cervical")
-	align(-z){
-		align(-x+y)
-		translate(1*unit*y)
-		ball(d=1/6*unit, anchor=x+y, $class="shoulderblade")
-		align(y, $class="humerus"){
-			ball(d=1/4*unit);
-			translate(2*unit*y)
-			ball(d=1/4*unit)
-			align(y, $class="forearm"){
-				ball(d=1/4*unit);
-				translate(1.5*unit*y)
-				ball(d=1/4*unit);
-			}
+module skeleton(){
+	hulled("cranium, forehead, jaw, chin")
+	hulled("pubis, ilium")
+	mirrored(y, class="*")//
+	hulled("ribs", $class="ribs")
+	hulled("thigh", $class="thigh") 
+	hulled("fibula", $class="fibula")
+	hulled("tibia", $class="tibia")
+	hulled("foot", $class="foot")
+	hulled("shoulderblade", $class="shoulderblade")
+	hulled("collarbone", $class="collarbone")
+	hulled("humerus", $class="humerus")
+	hulled("forearm", $class="forearm")
+	hulled("nose", $class="nose")
+	body();
+}
+
+module body(){
+	ball(d=unit, $class="cranium"){
+		translate(1/4*unit*x)
+		ball(d=unit, $class="forehead")
+		align(x-1/3*z)
+		ball(d=eye, anchor=x, $class="nose"){
+			align(x)
+			translate(1/4*unit*down)
+			ball(d=eye, anchor=center,, $class="nose");
+		
+			align(x+y)
+			ball(d=eye, anchor=x-y, $class="eye");
 		}
+		
+		align(bottom)
+		box([1/2*unit, 2/3*unit, 1/4*unit], anchor=-x+z, $class="jaw")
+		align(x-z)
+		ball(d=1/4*unit, anchor=-x+z, orientation=x, $class="chin")
+		;
 
-		align(-x+y)
-		translate(1*unit*y)
-		ball(d=1/6*unit, anchor=-x+y, $class="collarbone");
+		align(bottom)
+		rod(d=1/3*unit, h=unit, $class="cervical")
+		align(-z){
+			align(-x+y)
+			translate(1*unit*y)
+			ball(d=1/6*unit, anchor=x+y, $class="shoulderblade")
+			align(y, $class="humerus"){
+				ball(d=1/4*unit);
+				translate(2*unit*y)
+				ball(d=1/4*unit)
+				align(y, $class="forearm"){
+					ball(d=1/4*unit);
+					translate(1.5*unit*y)
+					ball(d=1/4*unit);
+				}
+			}
 
-		assign($class="ribs"){
-			//upper center
-			ball(d=unit, anchor=center){
+			assign($class="shoulderblade")
+			translate(1/2*unit*-x)
+			align(y)
+			ball(d=1/6*unit, anchor=-y+z);
+
+			align(-x+y)
+			translate(1*unit*y)
+			ball(d=1/6*unit, anchor=-x+y, $class="collarbone");
+
+			assign($class="ribs"){
+				//upper center
+				ball(d=unit, anchor=center){
+					align(x)
+					ball(d=1/6*unit, anchor=-x+z, $class="collarbone");
+
+					align(-z)
+					ball(d=unit);
+				}
+
+				//upper front
+				align(-x)
+				ball(d=unit, anchor=-x+z);
+
+				//upper back
+				align(-x)
+				ball(d=unit, anchor=-y+z){
+					//lower back
+					ball(d=unit, anchor=top)
+					align(-x)
+					ball(d=1/8*unit, anchor=x, $class="shoulderblade");
+
+					//lower front
+					align(x)
+					ball(d=unit, anchor=top)
+					ball(d=unit, anchor=top)
+					align(-x-y-z)
+					lower_body();
+				}
+			}
+
+		}
+	}
+}
+
+module lower_body(){
+	rod(1/3*unit, h=unit, anchor=-x+z, $class="lumbar"){
+		align(-z)
+		ball(d=unit, anchor=z, $class="ilium")
+		align(-z){
+			ball(d=1/2*unit, anchor=-x-y+z, $class="pubis")
+			align(-x+y)
+			ball(d=1/4*unit, anchor=-y, $class="thighball")
+			align(y)
+			ball(d=1/4*unit, $class="thigh");
+
+			translate(2.5*unit*down)
+			translate(1*inch*y)
+			ball(d=1/2*unit, anchor=-y-z, $class="condyle"){
 				align(x)
-				ball(d=1/6*unit, anchor=-x+z, $class="collarbone");
+				ball(d=1/4*unit, anchor=x, $class="thigh");
 
 				align(-z)
-				ball(d=unit);
-			}
+				ball(d=1/2*unit, anchor=z, $class="condyle"){
+					align(-x+y)
+					ball(d=1/6*unit, anchor=-x+y, $class="fibula");
 
-			//upper front
-			align(-x)
-			ball(d=unit, anchor=-x+z);
+					align(x-y)
+					ball(d=1/4*unit, anchor=x-y, $class="tibia")
+					translate(2.5*unit*down)
+					ball(d=1/4*unit, anchor=-z, $class="tibia"){
+						align(-x-y)
+						box([infinitesimal, 1/2*unit, 1/2*unit], anchor=-y+z, $class="foot")
+						align(bottom)
+						box([1.5*unit, 1/2*unit, infinitesimal], anchor=-x);
 
-			//upper back
-			align(-x)
-			ball(d=unit, anchor=-y+z){
-				//lower back
-				ball(d=unit, anchor=top)
-				align(-x)
-				ball(d=1/8*unit, anchor=x, $class="shoulderblade");
-
-				//lower front
-				align(x)
-				ball(d=unit, anchor=top)
-				ball(d=unit, anchor=top)
-				align(-x-y-z)
-				rod(1/3*unit, h=unit, anchor=-x+z, $class="lumbar"){
-					align(-z)
-					ball(d=unit, anchor=z, $class="ilium")
-					align(-z){
-						ball(d=1/2*unit, anchor=-x-y+z, $class="pubis")
 						align(-x+y)
-						ball(d=1/4*unit, anchor=-y, $class="thighball")
-						align(y)
-						ball(d=1/4*unit, $class="thigh");
-
-						translate(2.5*unit*down)
-						translate(1*inch*y)
-						ball(d=1/2*unit, anchor=-y-z, $class="condyle"){
-							align(x)
-							ball(d=1/4*unit, anchor=x, $class="thigh");
-
-							align(-z)
-							ball(d=1/2*unit, anchor=z, $class="condyle"){
-								align(-x+y)
-								ball(d=1/6*unit, anchor=-x+y, $class="fibula");
-
-								align(x-y)
-								ball(d=1/4*unit, anchor=x-y, $class="tibia")
-								translate(2.5*unit*down)
-								ball(d=1/4*unit, anchor=-z, $class="tibia"){
-									align(-x-y)
-									box([infinitesimal, 1/2*unit, 1/2*unit], anchor=-y+z, $class="foot")
-									align(bottom)
-									box([1.5*unit, 1/2*unit, infinitesimal], anchor=-x);
-
-									align(-x+y)
-									ball(d=1/6*unit, $class="fibula");
-								}
-							}
-						}
+						ball(d=1/6*unit, $class="fibula");
 					}
-
-					align(-y-z)
-					ball(d=unit, anchor=-y+z, $class="ilium");
 				}
 			}
 		}
 
-		assign($class="shoulderblade")
-		translate(1/2*unit*-x)
-		align(y)
-		ball(d=1/6*unit, anchor=-y+z);
-
+		align(-y-z)
+		ball(d=unit, anchor=-y+z, $class="ilium");
 	}
-	}
+}
