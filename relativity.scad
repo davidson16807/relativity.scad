@@ -1,4 +1,3 @@
-include <strings.scad>
 function relativity_version() =
 	[2014, 1, 19];
 function relativity_version_num() = 
