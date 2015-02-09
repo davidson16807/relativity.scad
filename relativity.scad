@@ -32,6 +32,8 @@ $parent_size=[0,0,0];
 $parent_bounds=[0,0,0];
 $parent_radius=0;
 $parent_type="space";
+// a stack of classes used by all ancestors
+$_ancestor_classes = [];
 
 //inhereted properties common to all geometric primitives in relativity.scad
 // indicates the class(es) to render
@@ -185,6 +187,7 @@ module box(	size=[1,1,1],
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
+			$_ancestor_classes = _push($_ancestor_classes, $class),
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, size)/2)
@@ -215,6 +218,7 @@ module rod(	size=[1,1,1],
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
 							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
+			$_ancestor_classes = _push($_ancestor_classes, $class),
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
@@ -248,6 +252,7 @@ module ball(size=[1,1,1],
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
+			$_ancestor_classes = _push($_ancestor_classes, $class),
 			$inward=center, 
 			$outward=center ){
 		translate(-hadamard(anchor, size)/2)
