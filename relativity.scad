@@ -166,8 +166,19 @@ module parent(size=undef, anchor=center){
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
-module box(size, anchor=$inward) {
-	assign(size = len(size)==undef && size!= undef? [size,size,size] : size)
+module box(	size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=$inward, bounds="box") {
+	assign(d = r!=undef? 2*r : d)
+	assign(size =	len(size)==undef && size!= undef? 
+							[size,size,size] : 
+						d != undef && h == undef? 
+							[d,d,indeterminate] : 
+						d == undef && h != undef? 
+							[indeterminate, indeterminate, h] : 
+						d != undef && h != undef?
+							[d,d,h] :
+						size)
 	assign( $parent_size = size, 
 			$parent_type="box", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
@@ -183,26 +194,30 @@ module box(size, anchor=$inward) {
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module rod(size=[1,1,1], 
-			h=indeterminate, d=indeterminate, r=undef, 
-			anchor=$inward, orientation=top) {
+module rod(	size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=$inward, orientation=top, bounds="rod") {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
-						d<indeterminate-1 || h<indeterminate-1? 
-							[d,d,h] : 
+						d != undef && h == undef? 
+							[d,d,indeterminate] : 
+						d == undef && h != undef? 
+							[indeterminate, indeterminate, h] : 
+						d != undef && h != undef?
+							[d,d,h] :
 						size)
-	assign(bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
+	assign(_bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
 	assign($parent_size = size, 
 			$parent_type="rod",
-			$parent_bounds=[abs(bounds.x) < indeterminate/2? abs(bounds.x) : 0,
-							abs(bounds.y) < indeterminate/2? abs(bounds.y) : 0,
-							abs(bounds.z) < indeterminate/2? abs(bounds.z) : 0],
+			$parent__bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
+							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
+							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
 			$inward=center, 
 			$outward=center){
-		translate(-hadamard(anchor, [abs(bounds.x),abs(bounds.y),abs(bounds.z)])/2){
+		translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
 			if(_matches_sizzle($class, $_show))
 				orient(orientation) 
 				resize(size) 
@@ -213,13 +228,19 @@ module rod(size=[1,1,1],
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
+module ball(size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=$inward, bounds="ball") {
 	//diameter is used internally to simplify the maths
 	assign(d = r!=undef? 2*r : d)
 	assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
-						d!=undef? 
+						d != undef && h == undef? 
 							[d,d,d] : 
+						d == undef && h != undef? 
+							[h,h,h] : 
+						d != undef && h != undef?
+							[d,d,h] :
 						size)
 	assign($parent_size = size, 
 			$parent_type="ball", 
@@ -235,6 +256,11 @@ module ball(size=[1,1,1], d=undef, r=undef, anchor=$inward) {
 			children();
 	}
 }
+
+
+
+
+
 
 //matrix rotation functions
 function _rotate_x_matrix(a)=
