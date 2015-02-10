@@ -39,7 +39,7 @@ $_ancestor_classes = [];
 // indicates the class(es) to render
 $_show = "*";
 // indicates the class that is either assigned-to or inherited-by an object
-$class = "";
+$class = [];
 
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
@@ -187,7 +187,7 @@ module box(	size=[1,1,1],
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
-			$_ancestor_classes = _push($_ancestor_classes, $class),
+			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, size)/2)
@@ -218,7 +218,7 @@ module rod(	size=[1,1,1],
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
 							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
-			$_ancestor_classes = _push($_ancestor_classes, $class),
+			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
@@ -252,7 +252,7 @@ module ball(size=[1,1,1],
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
-			$_ancestor_classes = _push($_ancestor_classes, $class),
+			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center ){
 		translate(-hadamard(anchor, size)/2)
@@ -294,25 +294,42 @@ function _orient_angles(zaxis)=
 		  		 0];
 
 function _matches_sizzle(classes, sizzle) = 
-	_sizzle_engine(_stack_tokenize(classes), sizzle);
+	_sizzle_engine(classes, sizzle);
 	
-//echo(_sizzle_engine("", "baz", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
-//echo(_sizzle_engine("", "foo", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
-//echo(_sizzle_engine("", "bar", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
+        
+//echo(_stack_tokenize("baz"));
+//echo(_sizzle_parse("not(foo,bar)"));
+//echo(_sizzle_parse("baz"));
+//echo(_sizzle_parse("bar baz"));
+//echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("baz")));
+//echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("foo,bar")));
+//echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("not(foo,bar)")));
+//echo(_sizzle_engine([["bar", []],[]], _sizzle_parse("not(foo,bar)")));
+//echo(_sizzle_engine([["baz", []], [["bar", []],[]]], _sizzle_parse("bar baz")));
+function _sizzle_engine_ancestor(ancestors, sizzle) = 
+        //return true if any ancestor matches the sizzle
+        len(ancestors) <= 0?
+            false
+        : _sizzle_engine(_push([], ancestors[0]), sizzle)?
+            true
+        : 
+            _sizzle_engine_ancestor(_pop(ancestors), sizzle)
+        ;
 function _sizzle_engine(classes, sizzle) = 
 	//is sizzle empty?
-	len(sizzle) <= 0?
-		true
-	//is sizzle a string?
-	: sizzle == str(sizzle)?
-		sizzle != "" && (sizzle == "*" || _has_token(classes, sizzle))
+	sizzle == str(sizzle)?
+		sizzle != "" && (sizzle == "*" || _has_token(classes[0], sizzle))
 	//is sizzle a known operator?
 	: sizzle[0] == "or"?
 		_sizzle_engine(classes, sizzle[1]) || _sizzle_engine(classes, sizzle[2])
 	: sizzle[0] == "not"?
-		!_sizzle_engine(classes, _pop(sizzle))
-	: //otherwise, sizzle is an "and" statement
-		_sizzle_engine(classes, sizzle[0]) && _sizzle_engine(classes, _pop(sizzle))
+		!_sizzle_engine(classes, sizzle[1])
+	: sizzle[0] == "and"?
+		_sizzle_engine(classes, sizzle[1]) && _sizzle_engine(classes, sizzle[2])
+	: sizzle[0] == "descendant"? //descendant(child, ancestor)
+		_sizzle_engine(_push([], classes[0]), sizzle[1]) && _sizzle_engine_ancestor(_pop(classes), sizzle[2])
+	: //invalid syntax
+		false
 	;
 
 function _sizzle_parse(sizzle) = 
@@ -320,7 +337,7 @@ function _sizzle_parse(sizzle) =
 		""
 	: 
 		_sizzle_DFA(
-			_stack_tokenize(sizzle)
+			_stack_tokenize(sizzle, ignore_space=false)
 		);
 
 //echo(_sizzle_DFA(_stack_tokenize("not(foo,bar)")));
@@ -340,17 +357,17 @@ function _sizzle_DFA(in, ops=[], args=[]) =
 			_sizzle_DFA(_pop(in),	_push(ops, "or"),	args)
 	:in[0] == "."?
 			_sizzle_DFA(_pop(in),	_push(ops, "and"),	args)
-        :trim(in[0]) == ""?
+   :trim(in[0]) == ""?
 			_sizzle_DFA(_pop(in),	_push(ops, "descendant"),args)
 	:in[0] == "("?
-			_sizzle_DFA(_pop(in),	_push(ops, "("),	args)
+			_sizzle_DFA(_pop(in),	_push(ops, "("),		args)
 	:in[0] == ")"?
 		ops[0] == "("?
-			_sizzle_DFA(_pop(in),	_pop(ops),		args)
+			_sizzle_DFA(_pop(in),	_pop(ops),			args)
 		:
-			_sizzle_DFA(in,		_pop(ops),		_push_sizzle_op(args, ops[0]))
+			_sizzle_DFA(in,		_pop(ops),				_push_sizzle_op(args, ops[0]))
 	:
-			_sizzle_DFA(_pop(in),	ops,                    _push(args, in[0]))
+			_sizzle_DFA(_pop(in),	ops,                _push(args, in[0]))
 	;
         
 function _push_sizzle_op(args, op) = 
@@ -366,6 +383,7 @@ function _push_sizzle_op(args, op) =
 		)
 	;
 	
+//echo(_has_token(["baz",[]], "baz"));
 //echo(_has_token(_stack_tokenize("foo bar baz"), "baz"));
 function _has_token(tokens, token) = 
 	len(tokens) <= 0?
@@ -375,29 +393,24 @@ function _has_token(tokens, token) =
 	: 
 		_has_token(_pop(tokens), token)
 	;	
-
-//echo(_stack_reverse([["boo", "far"], ["bar", ["foo", []]]]));
-function _stack_reverse(stack, output=[]) =
-        len(stack) <= 0?
-                output
-        : 
-                _stack_reverse(_pop(stack), _push(output, stack[0]))
-        ;
         
 //returns a stack representing the tokenization of an input string
 //stacks are used due to limitations in OpenSCAD when processing lists
 //stacks are represented through nested right associative lists
-echo(_stack_tokenize("not(foo)"));
-echo(_stack_tokenize("foo bar baz  "));
-function _stack_tokenize(string, pos=0) = 
+//echo(_stack_tokenize("not(foo)"));
+//echo(_stack_tokenize("foo bar baz  "));
+function _stack_tokenize(string, pos=0, ignore_space=true) = 
 	pos >= len(string)?
 		[]
 	:
 		_push(	
-			_stack_tokenize(string, _token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=false), ignore_space=false),
+			_stack_tokenize(string, 
+				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space), 
+				ignore_space=ignore_space),
 			between(string, 
-				_token_start(string, pos, ignore_space=false), 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=false))
+				_token_start(string, pos, ignore_space=ignore_space), 
+				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space)
+			)
 		)
 	;
 
