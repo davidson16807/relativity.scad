@@ -1,5 +1,5 @@
 function relativity_version() =
-	[2014, 1, 19];
+	[2014, 2, 14];
 function relativity_version_num() = 
 	relativity_version().x * 10000 + relativity_version().y * 100 + relativity_version().z;
 echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y, ".", relativity_version().z));
@@ -87,7 +87,7 @@ module hide(class="*"){
 }
 
 module hulled(class="*"){
-	if(_matches_sizzle($class, $_show))
+	if(_matches_sizzle($_ancestor_classes, $_show))
 	hull()
 	assign($_show=_sizzle_parse(class))
 	children();
@@ -103,7 +103,7 @@ module differed(negative, positive="*", unaffected=undef){
 	assign( _negative = _sizzle_parse(negative) )
 	assign( _unaffected = unaffected != undef? 
 		_sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]]){
-		if(_matches_sizzle($class, $_show))
+		if(_matches_sizzle($_ancestor_classes, $_show))
 		difference(){
 			assign($_show = _positive)
 				children();
@@ -121,7 +121,7 @@ module intersected(class1, class2, unaffected=undef){
 		class2 = _sizzle_parse(class2))
 	assign( unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]]){
-		if(_matches_sizzle($class, $_show))
+		if(_matches_sizzle($_ancestor_classes, $_show))
 		intersection(){
 			assign($_show = class1)
 				children();
@@ -191,7 +191,7 @@ module box(	size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, size)/2)
-			if(_matches_sizzle($class, $_show)) cube(size, center=true);
+			if(_matches_sizzle($_ancestor_classes, $_show)) cube(size, center=true);
 		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -222,7 +222,7 @@ module rod(	size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
-			if(_matches_sizzle($class, $_show))
+			if(_matches_sizzle($_ancestor_classes, $_show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
@@ -256,7 +256,7 @@ module ball(size=[1,1,1],
 			$inward=center, 
 			$outward=center ){
 		translate(-hadamard(anchor, size)/2)
-			if(_matches_sizzle($class, $_show)) resize(size) sphere(d=size.x, center=true);
+			if(_matches_sizzle($_ancestor_classes, $_show)) resize(size) sphere(d=size.x, center=true);
 		translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -292,27 +292,27 @@ function _orient_angles(zaxis)=
 				[-asin(zaxis.y / norm(zaxis)),
 		  		 atan2(zaxis.x, zaxis.z),
 		  		 0];
-				 
+
 function _matches_sizzle(classes, sizzle) = 
 	_sizzle_engine(_stack_tokenize(classes), sizzle);
 	
 //echo(_sizzle_engine("", "baz", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
 //echo(_sizzle_engine("", "foo", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
 //echo(_sizzle_engine("", "bar", "", _sizzle_DFA(_stack_tokenize("not(foo,bar)"))));
-function _sizzle_engine(class, sizzle) = 
+function _sizzle_engine(classes, sizzle) = 
 	//is sizzle empty?
 	len(sizzle) <= 0?
 		true
 	//is sizzle a string?
 	: sizzle == str(sizzle)?
-		sizzle != "" && (sizzle == "*" || _has_token(class, sizzle))
+		sizzle != "" && (sizzle == "*" || _has_token(classes, sizzle))
 	//is sizzle a known operator?
 	: sizzle[0] == "or"?
-		_sizzle_engine(class, sizzle[1]) || _sizzle_engine(class, sizzle[2])
+		_sizzle_engine(classes, sizzle[1]) || _sizzle_engine(classes, sizzle[2])
 	: sizzle[0] == "not"?
-		!_sizzle_engine(class, _pop(sizzle))
+		!_sizzle_engine(classes, _pop(sizzle))
 	: //otherwise, sizzle is an "and" statement
-		_sizzle_engine(class, sizzle[0]) && _sizzle_engine(class, _pop(sizzle))
+		_sizzle_engine(classes, sizzle[0]) && _sizzle_engine(classes, _pop(sizzle))
 	;
 
 function _sizzle_parse(sizzle) = 
@@ -324,6 +324,9 @@ function _sizzle_parse(sizzle) =
 		);
 
 //echo(_sizzle_DFA(_stack_tokenize("not(foo,bar)")));
+//echo(_sizzle_DFA(_stack_tokenize("foo,bar baz")));
+//echo(_sizzle_DFA(_stack_tokenize("foo bar,baz")));
+//echo(_sizzle_DFA(_stack_tokenize("foo.bar,baz")));
 //simulates a deterministic finite automaton that parses tokenized sizzle strings
 function _sizzle_DFA(in, ops=[], args=[]) = 
 	len(in) <= 0?
@@ -335,6 +338,10 @@ function _sizzle_DFA(in, ops=[], args=[]) =
 			_sizzle_DFA(_pop(in),	_push(ops, "not"),	args)
 	:in[0] == ","?
 			_sizzle_DFA(_pop(in),	_push(ops, "or"),	args)
+	:in[0] == "."?
+			_sizzle_DFA(_pop(in),	_push(ops, "and"),	args)
+        :trim(in[0]) == ""?
+			_sizzle_DFA(_pop(in),	_push(ops, "descendant"),args)
 	:in[0] == "("?
 			_sizzle_DFA(_pop(in),	_push(ops, "("),	args)
 	:in[0] == ")"?
@@ -343,10 +350,11 @@ function _sizzle_DFA(in, ops=[], args=[]) =
 		:
 			_sizzle_DFA(in,		_pop(ops),		_push_sizzle_op(args, ops[0]))
 	:
-			_sizzle_DFA(_pop(in),	ops,			_push(args, in[0]))
+			_sizzle_DFA(_pop(in),	ops,                    _push(args, in[0]))
 	;
+        
 function _push_sizzle_op(args, op) = 
-	op == "or"?
+	op == "or" || op == "and" || op == "descendant"?
 		_push(
 			_pop(args, 2),
 			[op, args[0], args[1][0]]
@@ -368,20 +376,28 @@ function _has_token(tokens, token) =
 		_has_token(_pop(tokens), token)
 	;	
 
+//echo(_stack_reverse([["boo", "far"], ["bar", ["foo", []]]]));
+function _stack_reverse(stack, output=[]) =
+        len(stack) <= 0?
+                output
+        : 
+                _stack_reverse(_pop(stack), _push(output, stack[0]))
+        ;
+        
 //returns a stack representing the tokenization of an input string
 //stacks are used due to limitations in OpenSCAD when processing lists
 //stacks are represented through nested right associative lists
-//echo(_stack_tokenize("not(foo)"));
-//echo(_stack_tokenize("foo bar baz  "));
+echo(_stack_tokenize("not(foo)"));
+echo(_stack_tokenize("foo bar baz  "));
 function _stack_tokenize(string, pos=0) = 
 	pos >= len(string)?
 		[]
 	:
 		_push(	
-			_stack_tokenize(string, _token_end(string, pos, token_characters=str(_alphanumeric, "_-"))),
+			_stack_tokenize(string, _token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=false), ignore_space=false),
 			between(string, 
-				_token_start(string, pos), 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-")))
+				_token_start(string, pos, ignore_space=false), 
+				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=false))
 		)
 	;
 
