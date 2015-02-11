@@ -7,6 +7,8 @@ echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y
 if(version_num() < 20140300)
 	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
 
+
+
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -77,12 +79,12 @@ module mirrored(axes=[0,0,0], class="*"){
 }
 
 module show(class="*"){
-	assign($_show=_push($_show, _sizzle_parse(class)))
+	assign($_show=["and", $_show, _sizzle_parse(class)])
 	children();
 }
 
 module hide(class="*"){
-	assign($_show=_push($_show, ["not", _sizzle_parse(class)]))
+	assign($_show=["and", $_show, ["not", _sizzle_parse(class)]])
 	children();
 }
 
@@ -110,7 +112,7 @@ module differed(negative, positive="*", unaffected=undef){
 			assign($_show = _negative)
 				children();
 		}
-		assign($_show=_push($_show, _unaffected))
+		assign($_show=["and", $_show, _unaffected])
 			children();
 	}
 }
@@ -128,7 +130,7 @@ module intersected(class1, class2, unaffected=undef){
 			assign($_show = class2)
 				children();
 		}
-		assign($_show=_push($_show, unaffected))
+		assign($_show=["and", $_show, unaffected])
 			children();
 	}
 }
