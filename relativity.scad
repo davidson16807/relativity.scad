@@ -8,7 +8,6 @@ if(version_num() < 20140300)
 	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
 
 
-
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -216,7 +215,7 @@ module rod(	size=[1,1,1],
 	assign(_bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
 	assign($parent_size = size, 
 			$parent_type="rod",
-			$parent__bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
+			$parent_bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
 							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
@@ -395,7 +394,7 @@ function _has_token(tokens, token) =
 	: 
 		_has_token(_pop(tokens), token)
 	;	
-        
+
 //returns a stack representing the tokenization of an input string
 //stacks are used due to limitations in OpenSCAD when processing lists
 //stacks are represented through nested right associative lists
