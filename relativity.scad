@@ -77,6 +77,14 @@ module mirrored(axes=[0,0,0], class="*"){
 		children();
 }
 
+module hook(class){
+	assign(
+		$class=class,
+		$_ancestor_classes = _push($ancestor_classes, _stack_tokenize(class))
+	)
+	children();
+}
+
 module show(class="*"){
 	assign($_show=["and", $_show, _sizzle_parse(class)])
 	children();
