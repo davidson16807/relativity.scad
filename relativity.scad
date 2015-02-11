@@ -77,11 +77,8 @@ module mirrored(axes=[0,0,0], class="*"){
 		children();
 }
 
-module hook(class){
-	assign(
-		$class=class,
-		$_ancestor_classes = _push($ancestor_classes, _stack_tokenize(class))
-	)
+module attach(class){
+	assign($_show=["descendant", "*", class])
 	children();
 }
 
@@ -164,6 +161,7 @@ module orient(zaxis, roll=0){
 // duplicates last instance of box/rod/ball in the call stack
 // useful for performing hull() or difference() between parent and child 
 module parent(size=undef, anchor=center){
+	echo("WARNING: parent() module is depreciated. Please use CSG operators such as differed() and hulled().");
 	assign(size = size==undef? $parent_size : size)
 	if($parent_type=="box") 
 		box(size, anchor=anchor)
@@ -174,6 +172,16 @@ module parent(size=undef, anchor=center){
 	else if($parent_type=="ball")
 		ball(size, anchor=anchor)
 			children();
+}
+
+// a mutator for assigning values to $class
+// useful for creating "hooks" onto which child modules can be attached via attach()
+// note: name is subject to change
+module hook(){
+	assign(
+		$_ancestor_classes = _push($ancestor_classes, _stack_tokenize(class))
+	)
+	children();
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
@@ -335,8 +343,10 @@ function _sizzle_engine(classes, sizzle) =
 		!_sizzle_engine(classes, sizzle[1])
 	: sizzle[0] == "and"?
 		_sizzle_engine(classes, sizzle[1]) && _sizzle_engine(classes, sizzle[2])
-	: sizzle[0] == "descendant"? //descendant(child, ancestor)
+	: sizzle[0] == "descendant"? // parameters: descendant, ancestor
 		_sizzle_engine(_push([], classes[0]), sizzle[1]) && _sizzle_engine_ancestor(_pop(classes), sizzle[2])
+	: sizzle[0] == "child"? // parameters: child, parent
+		_sizzle_engine(_push([], classes[0]), sizzle[1]) && _sizzle_engine_ancestor(_push([], _pop(classes)[0]), sizzle[2])
 	: //invalid syntax
 		false
 	;
