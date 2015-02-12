@@ -78,7 +78,7 @@ module mirrored(axes=[0,0,0], class="*"){
 }
 
 module attach(class){
-	assign($_show=["descendant", "*", class])
+	assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
 	children();
 }
 
