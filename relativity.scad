@@ -78,6 +78,7 @@ module mirrored(axes=[0,0,0], class="*"){
 }
 
 module attach(class){
+	assign($_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)))
 	assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
 	children();
 }
@@ -172,16 +173,6 @@ module parent(size=undef, anchor=center){
 	else if($parent_type=="ball")
 		ball(size, anchor=anchor)
 			children();
-}
-
-// a mutator for assigning values to $class
-// useful for creating "hooks" onto which child modules can be attached via attach()
-// note: name is subject to change
-module hook(){
-	assign(
-		$_ancestor_classes = _push($ancestor_classes, _stack_tokenize(class))
-	)
-	children();
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
