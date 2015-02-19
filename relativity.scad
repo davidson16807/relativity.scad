@@ -153,10 +153,14 @@ module align(anchors){
 }
 
 // like rotate(), but works by aligning the zaxis to a given vector
-module orient(zaxis, roll=0){
-	rotate(_orient_angles(zaxis))
-	rotate(roll*z)
-		children();
+module orient(zaxes, roll=0){
+	assign(zaxes = len(zaxes.x) == undef && anchors.x != undef? [zaxes] : zaxes)
+	for(zaxis=zaxes)
+	{
+		rotate(_orient_angles(zaxis))
+		rotate(roll*z)
+			children();
+	}
 }
 
 // duplicates last instance of box/rod/ball in the call stack
