@@ -1,5 +1,5 @@
 function relativity_version() =
-	[2014, 2, 14];
+	[2014, 3, 17];
 function relativity_version_num() = 
 	relativity_version().x * 10000 + relativity_version().y * 100 + relativity_version().z;
 echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y, ".", relativity_version().z));
@@ -41,6 +41,8 @@ $_ancestor_classes = [];
 $_show = "*";
 // indicates the class that is either assigned-to or inherited-by an object
 $class = [];
+// indicates the absolute position of a primitive
+$position = [0,0,0];
 
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
@@ -50,7 +52,7 @@ function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 module translated(offset, n=[1], class="*"){
 	show(class)
 	for(i=n)
-		translate(offset*i)
+		_translate(offset*i)
 			children();
 	hide(class)
 		children();
@@ -146,7 +148,7 @@ module align(anchors){
 	assign(anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors)
 	for(anchor=anchors)
 	{
-		translate(hadamard(anchor, $parent_bounds)/2)
+		_translate(hadamard(anchor, $parent_bounds)/2)
 		assign($outward = anchor, $inward = -anchor)
 			children();
 	}
@@ -202,9 +204,9 @@ module box(	size=[1,1,1],
 			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center){
-		translate(-hadamard(anchor, size)/2)
+		_translate(-hadamard(anchor, size)/2)
 			if(_matches_sizzle($_ancestor_classes, $_show)) cube(size, center=true);
-		translate(-hadamard(anchor, $parent_bounds)/2)
+		_translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -233,13 +235,13 @@ module rod(	size=[1,1,1],
 			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center){
-		translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
+		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
 			if(_matches_sizzle($_ancestor_classes, $_show))
 				orient(orientation) 
 				resize(size) 
 				cylinder(d=size.x, h=size.z, center=true);
 		}
-		translate(-hadamard(anchor, $parent_bounds)/2)
+		_translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -267,9 +269,9 @@ module ball(size=[1,1,1],
 			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center ){
-		translate(-hadamard(anchor, size)/2)
+		_translate(-hadamard(anchor, size)/2)
 			if(_matches_sizzle($_ancestor_classes, $_show)) resize(size) sphere(d=size.x, center=true);
-		translate(-hadamard(anchor, $parent_bounds)/2)
+		_translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
 }
@@ -304,6 +306,13 @@ function _orient_angles(zaxis)=
 				[-asin(zaxis.y / norm(zaxis)),
 		  		 atan2(zaxis.x, zaxis.z),
 		  		 0];
+
+//private wrapper for translate(), tracks the position of children using a special variable, $position
+module _translate(offset){
+	assign($position = $position + offset)
+	translate(offset)
+	children();
+}
 
 function _matches_sizzle(classes, sizzle) = 
 	_sizzle_engine(classes, sizzle);
