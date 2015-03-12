@@ -8,13 +8,6 @@ if(version_num() < 20140300)
 	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
 
 
-box(50)
-align(top)
-ball(50)
-align(top)
-rod(50, $class="foo")
-echo($position);
-
 // an arbitrarily large number
 // must be finite to allow use in geometric operations
 // interaction between objects of indeterminate size results in undefined behavior
@@ -50,6 +43,9 @@ $_show = "*";
 $class = [];
 // indicates the absolute position of a primitive
 $position = [0,0,0];
+// a vector indicating the direction of a parent object
+$inward = [0,0,0];
+$outward = [0,0,0];
 
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
@@ -89,13 +85,6 @@ module mirrored(axes=[0,0,0], class="*"){
 module attach(class){
 	assign($_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)))
 	assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
-	children();
-}
-
-module anchor(class){
-	attach(class)
-	children()
-	translate(-2*$position)
 	children();
 }
 
@@ -162,9 +151,12 @@ module align(anchors){
 	assign(anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors)
 	for(anchor=anchors)
 	{
-		_translate(hadamard(anchor, $parent_bounds)/2)
+		_translate(hadamard(anchor, $parent_bounds)/2){
+		echo("align");
+		echo($position);
 		assign($outward = anchor, $inward = -anchor)
 			children();
+		}
 	}
 }
 
@@ -323,8 +315,6 @@ function _orient_angles(zaxis)=
 
 //private wrapper for translate(), tracks the position of children using a special variable, $position
 module _translate(offset){
-	echo("offset", offset);
-	echo("position", $position);
 	assign($position = $position + offset)
 	translate(offset)
 	children();
