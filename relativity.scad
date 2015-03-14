@@ -43,9 +43,6 @@ $_show = "*";
 $class = [];
 // indicates the absolute position of a primitive
 $position = [0,0,0];
-// a vector indicating the direction of a parent object
-$inward = [0,0,0];
-$outward = [0,0,0];
 
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
@@ -83,25 +80,25 @@ module mirrored(axes=[0,0,0], class="*"){
 }
 
 module attach(class){
-	assign($_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)))
-	assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
+	_assign($_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)))
+	_assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
 	children();
 }
 
 module show(class="*"){
-	assign($_show=["and", $_show, _sizzle_parse(class)])
+	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	children();
 }
 
 module hide(class="*"){
-	assign($_show=["and", $_show, ["not", _sizzle_parse(class)]])
+	_assign($_show=["and", $_show, ["not", _sizzle_parse(class)]])
 	children();
 }
 
 module hulled(class="*"){
 	if(_matches_sizzle($_ancestor_classes, $_show))
 	hull()
-	assign($_show=_sizzle_parse(class))
+	_assign($_show=_sizzle_parse(class))
 	children();
 	
 	hide(class)
@@ -111,36 +108,36 @@ module hulled(class="*"){
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
 module differed(negative, positive="*", unaffected=undef){
-	assign(	_positive = _sizzle_parse(positive) )
-	assign( _negative = _sizzle_parse(negative) )
-	assign( _unaffected = unaffected != undef? 
+	_assign(	_positive = _sizzle_parse(positive) )
+	_assign( _negative = _sizzle_parse(negative) )
+	_assign( _unaffected = unaffected != undef? 
 		_sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]]){
 		if(_matches_sizzle($_ancestor_classes, $_show))
 		difference(){
-			assign($_show = _positive)
+			_assign($_show = _positive)
 				children();
-			assign($_show = _negative)
+			_assign($_show = _negative)
 				children();
 		}
-		assign($_show=["and", $_show, _unaffected])
+		_assign($_show=["and", $_show, _unaffected])
 			children();
 	}
 }
 
 // performs the intersection on a list of object classes
 module intersected(class1, class2, unaffected=undef){
-	assign(	class1 = _sizzle_parse(class1),
+	_assign(	class1 = _sizzle_parse(class1),
 		class2 = _sizzle_parse(class2))
-	assign( unaffected = unaffected != undef? 
+	_assign( unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]]){
 		if(_matches_sizzle($_ancestor_classes, $_show))
 		intersection(){
-			assign($_show = class1)
+			_assign($_show = class1)
 				children();
-			assign($_show = class2)
+			_assign($_show = class2)
 				children();
 		}
-		assign($_show=["and", $_show, unaffected])
+		_assign($_show=["and", $_show, unaffected])
 			children();
 	}
 }
@@ -148,21 +145,18 @@ module intersected(class1, class2, unaffected=undef){
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
 module align(anchors){
-	assign(anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors)
+	_assign(anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors)
 	for(anchor=anchors)
 	{
-		_translate(hadamard(anchor, $parent_bounds)/2){
-		echo("align");
-		echo($position);
-		assign($outward = anchor, $inward = -anchor)
+		_translate(hadamard(anchor, $parent_bounds)/2)
+		_assign($outward = anchor, $inward = -anchor)
 			children();
-		}
 	}
 }
 
 // like rotate(), but works by aligning the zaxis to a given vector
 module orient(zaxes, roll=0){
-	assign(zaxes = len(zaxes.x) == undef && anchors.x != undef? [zaxes] : zaxes)
+	_assign(zaxes = len(zaxes.x) == undef && zaxes.x != undef? [zaxes] : zaxes)
 	for(zaxis=zaxes)
 	{
 		rotate(_orient_angles(zaxis))
@@ -175,7 +169,7 @@ module orient(zaxes, roll=0){
 // useful for performing hull() or difference() between parent and child 
 module parent(size=undef, anchor=center){
 	echo("WARNING: parent() module is depreciated. Please use CSG operators such as differed() and hulled().");
-	assign(size = size==undef? $parent_size : size)
+	_assign(size = size==undef? $parent_size : size)
 	if($parent_type=="box") 
 		box(size, anchor=anchor)
 			children();
@@ -191,8 +185,8 @@ module parent(size=undef, anchor=center){
 module box(	size=[1,1,1], 
 			h=undef, d=undef, r=undef, 
 			anchor=$inward, bounds="box") {
-	assign(d = r!=undef? 2*r : d)
-	assign(size =	len(size)==undef && size!= undef? 
+	_assign(d = r!=undef? 2*r : d)
+	_assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
 						d != undef && h == undef? 
 							[d,d,indeterminate] : 
@@ -201,7 +195,7 @@ module box(	size=[1,1,1],
 						d != undef && h != undef?
 							[d,d,h] :
 						size)
-	assign( $parent_size = size, 
+	_assign( $parent_size = size, 
 			$parent_type="box", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
@@ -221,8 +215,8 @@ module rod(	size=[1,1,1],
 			h=undef, d=undef, r=undef, 
 			anchor=$inward, orientation=top, bounds="rod") {
 	//diameter is used internally to simplify the maths
-	assign(d = r!=undef? 2*r : d)
-	assign(size =	len(size)==undef && size!= undef? 
+	_assign(d = r!=undef? 2*r : d)
+	_assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
 						d != undef && h == undef? 
 							[d,d,indeterminate] : 
@@ -231,8 +225,8 @@ module rod(	size=[1,1,1],
 						d != undef && h != undef?
 							[d,d,h] :
 						size)
-	assign(_bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
-	assign($parent_size = size, 
+	_assign(_bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1])
+	_assign($parent_size = size, 
 			$parent_type="rod",
 			$parent_bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
@@ -256,8 +250,8 @@ module ball(size=[1,1,1],
 			h=undef, d=undef, r=undef, 
 			anchor=$inward, bounds="ball") {
 	//diameter is used internally to simplify the maths
-	assign(d = r!=undef? 2*r : d)
-	assign(size =	len(size)==undef && size!= undef? 
+	_assign(d = r!=undef? 2*r : d)
+	_assign(size =	len(size)==undef && size!= undef? 
 							[size,size,size] : 
 						d != undef && h == undef? 
 							[d,d,d] : 
@@ -266,7 +260,7 @@ module ball(size=[1,1,1],
 						d != undef && h != undef?
 							[d,d,h] :
 						size)
-	assign($parent_size = size, 
+	_assign($parent_size = size, 
 			$parent_type="ball", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
@@ -315,8 +309,12 @@ function _orient_angles(zaxis)=
 
 //private wrapper for translate(), tracks the position of children using a special variable, $position
 module _translate(offset){
-	assign($position = $position + offset)
+	_assign($position = $position + offset)
 	translate(offset)
+	children();
+}
+//private wrapper for assign(), which is being depreciated
+module _assign(){
 	children();
 }
 
@@ -444,7 +442,6 @@ function _stack_tokenize(string, pos=0, ignore_space=true) =
 	;
 
 
-
 _digit = "0123456789";
 _lowercase = "abcdefghijklmnopqrstuvwxyz";
 _uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -455,6 +452,11 @@ _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
 
 _regex_ops = "?*+&|";
+
+function strings_version() =
+	[2014, 12, 26];
+function strings_version_num() =
+	20141226;
 
 
 
@@ -472,8 +474,6 @@ function replace(string, replaced, replacement, ignore_case=false, regex=false) 
 		_replace_regex(string, _parse_rx(replaced), replacement, ignore_case=ignore_case)
 	: string == undef?
 		undef
-	: pos >= len(string)?
-		""
 	: contains(string, replaced, ignore_case=ignore_case)?
 		str(	before(string, index_of(string, replaced, ignore_case=ignore_case)),
 			replacement,
@@ -486,8 +486,6 @@ function replace(string, replaced, replacement, ignore_case=false, regex=false) 
 function _replace_regex(string, pattern, replacement, ignore_case=false) = 	//string
 	string == undef?
 		undef
-	: pos >= len(string)?
-		""
 	: 
 		_replace_between_range(string, pattern, replacement, 
 			_index_of_regex(string, pattern, ignore_case=ignore_case),
