@@ -30,8 +30,6 @@ function replace(string, replaced, replacement, ignore_case=false, regex=false) 
 		_replace_regex(string, _parse_rx(replaced), replacement, ignore_case=ignore_case)
 	: string == undef?
 		undef
-	: pos >= len(string)?
-		""
 	: contains(string, replaced, ignore_case=ignore_case)?
 		str(	before(string, index_of(string, replaced, ignore_case=ignore_case)),
 			replacement,
@@ -44,8 +42,6 @@ function replace(string, replaced, replacement, ignore_case=false, regex=false) 
 function _replace_regex(string, pattern, replacement, ignore_case=false) = 	//string
 	string == undef?
 		undef
-	: pos >= len(string)?
-		""
 	: 
 		_replace_between_range(string, pattern, replacement, 
 			_index_of_regex(string, pattern, ignore_case=ignore_case),
