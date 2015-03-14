@@ -244,7 +244,6 @@ module rod(	size=[1,1,1],
 			$_ancestor_classes = _push($_ancestor_classes, _stack_tokenize($class)),
 			$inward=center, 
 			$outward=center){
-        echo(_bounds);
 		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
 			if(_matches_sizzle($_ancestor_classes, $_show))
 				orient(orientation) 
