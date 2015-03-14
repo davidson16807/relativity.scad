@@ -98,10 +98,12 @@ module hide(class="*"){
 }
 
 module hulled(class="*"){
-	if(_matches_sizzle($_ancestor_classes, $_show))
-	hull()
+	if(_sizzle_engine($_ancestor_classes, $_show))
+	hull(){
 	_assign($_show=_sizzle_parse(class))
 	children();
+        echo("hulled");
+    }
 	
 	hide(class)
 	children();
@@ -115,7 +117,7 @@ module differed(negative, positive="*", unaffected=undef){
 	_unaffected = unaffected != undef? 
         _sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]];
     
-    if(_matches_sizzle($_ancestor_classes, $_show))
+    if(_sizzle_engine($_ancestor_classes, $_show))
     difference(){
         _assign($_show = _positive)
             children();
@@ -133,7 +135,7 @@ module intersected(class1, class2, unaffected=undef){
 	unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]];
     
-    if(_matches_sizzle($_ancestor_classes, $_show))
+    if(_sizzle_engine($_ancestor_classes, $_show))
     intersection(){
         _assign($_show = class1)
             children();
@@ -201,7 +203,7 @@ module box(	size=[1,1,1],
                 size
             ;
                 
-	_assign( $parent_size = size, 
+	_assign($parent_size = size, 
 			$parent_type="box", 
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
@@ -211,7 +213,7 @@ module box(	size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		_translate(-hadamard(anchor, $parent_size)/2)
-			if(_matches_sizzle($_ancestor_classes, $_show)) cube($parent_size, center=true);
+			if(_sizzle_engine($_ancestor_classes, $_show)) cube($parent_size, center=true);
 		_translate(-hadamard(anchor, $parent_bounds)/2)
 			children();
 	}
@@ -245,7 +247,7 @@ module rod(	size=[1,1,1],
 			$inward=center, 
 			$outward=center){
 		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
-			if(_matches_sizzle($_ancestor_classes, $_show))
+			if(_sizzle_engine($_ancestor_classes, $_show))
 				orient(orientation) 
 				resize($parent_size) 
 				cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
@@ -263,9 +265,9 @@ module ball(size=[1,1,1],
 	size =	len(size)==undef && size!= undef? 
                 [size,size,size] 
             : d != undef && h == undef? 
-                [d,d,indeterminate] 
+                [d,d,d] 
             : d == undef && h != undef? 
-                [indeterminate, indeterminate, h] 
+                [h, h, h] 
             : d != undef && h != undef?
                 [d,d,h] 
             : 
@@ -282,7 +284,7 @@ module ball(size=[1,1,1],
 			$inward=center, 
 			$outward=center ){
 		_translate(-hadamard(anchor, $parent_size)/2)
-			if(_matches_sizzle($_ancestor_classes, $_show)) 
+			if(_sizzle_engine($_ancestor_classes, $_show)) 
                 resize($parent_size) 
                 sphere(d=$parent_size.x, center=true);
 		_translate(-hadamard(anchor, $parent_bounds)/2)
@@ -329,9 +331,6 @@ module _translate(offset){
 	translate(offset)
 	children();
 }
-
-function _matches_sizzle(classes, sizzle) = 
-	_sizzle_engine(classes, sizzle);
 	
         
 //echo(_stack_tokenize("baz"));
@@ -353,7 +352,7 @@ function _sizzle_engine_ancestor(ancestors, sizzle) =
             _sizzle_engine_ancestor(_pop(ancestors), sizzle)
         ;
 function _sizzle_engine(classes, sizzle) = 
-	//is sizzle empty?
+	//is sizzle a string?
 	sizzle == str(sizzle)?
 		sizzle != "" && (sizzle == "*" || _has_token(classes[0], sizzle))
 	//is sizzle a known operator?
@@ -425,7 +424,7 @@ function _push_sizzle_op(args, op) =
 //echo(_has_token(["baz",[]], "baz"));
 //echo(_has_token(_stack_tokenize("foo bar baz"), "baz"));
 function _has_token(tokens, token) = 
-	len(tokens) <= 0?
+	tokens == undef || len(tokens) <= 0?
 		false
 	: tokens[0] == token?
 		true
