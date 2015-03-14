@@ -3,14 +3,6 @@ include <strings.scad>
 test = "foo  (1, bar2)";
 regex_test = "foooobazfoobarbaz";
 
-function all(booleans, index=0) = 
-	index >= len(booleans)?
-		true
-	: !booleans[index]?
-		false
-	: 
-		all(booleans, index+1)
-	;
 	
 
 
@@ -204,7 +196,7 @@ echo([
 			["f", ["e", ["d", ["c", ["b", ["a", []]]]]]]
 		 ]
 	], 
-	_parse_rx("^[a-z]") == ["[", [["-", "a", "z"], []]],
+	_parse_rx("^[a-z]") == ["&", "^", ["[", [["-", "a", "z"], []]]],
 	"escape characters",
 	_parse_rx("\\d") == "\\d",
 	_parse_rx("\\d\\d") == ["&", "\\d", "\\d"],
