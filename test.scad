@@ -54,8 +54,11 @@ echo([	"join:",
 	join(["foo", "bar", "baz"], "") == "foobarbaz",
 	join(["foo"], ",") == "foo",
 	join([], "") == "",
-	
 ]);
+echo(["is_in:",
+    is_in("r", "foobar"),
+    !is_in("x", "foobar")
+    ]);
 *echo(["lower:", lower("!@#$1234FOOBAR!@#$1234") == "!@#$1234foobar!@#$1234"]);
 *echo(["upper:", upper("!@#$1234foobar!@#$1234") == "!@#$1234FOOBAR!@#$1234"]);
 echo(["equals:", 
@@ -99,16 +102,16 @@ echo(["replace",
 	replace("foobar foobar", "OO", "ee", ignore_case=true) == "feebar feebar",
 ]);
 
-echo([	"token:",
-	token(" ", 0) == undef,
-	token(test, -1) == undef,
-	token(test, 0) == "foo",
-	token(test, 1) == "(",
-	token(test, 2) == "1",
-	token(test, 3) == ",",
-	token(test, 4) == "bar2",
-	token(test, 5) == ")",
-	token(test, 6) == undef,
+echo([	"tokenize:",
+	tokenize(" ") == [""],
+	tokenize(test)[-1] == undef,
+	tokenize(test)[0] == "foo",
+	tokenize(test)[1] == "(",
+	tokenize(test)[2] == "1",
+	tokenize(test)[3] == ",",
+	tokenize(test)[4] == "bar2",
+	tokenize(test)[5] == ")",
+	tokenize(test)[6] == undef,
 ]);
 
 echo([	"_token_end:",
