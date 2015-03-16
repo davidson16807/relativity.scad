@@ -1,3 +1,454 @@
+function relativity_version() =
+	[2014, 3, 17];
+function relativity_version_num() = 
+	relativity_version().x * 10000 + relativity_version().y * 100 + relativity_version().z;
+echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y, ".", relativity_version().z));
+
+if(version_num() < 20140300)
+	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
+
+
+// an arbitrarily large number
+// must be finite to allow use in geometric operations
+// interaction between objects of indeterminate size results in undefined behavior
+indeterminate = 1e6;
+
+// an arbitrarily small number
+// must be nonzero to meet the assumptions of the library
+
+infinitesimal = 0.001;
+
+// helper variables for aligning along the z axis
+top = [0,0,1];
+center=[0,0,0];
+bottom = [0,0,-1];
+up = [0,0,1];
+down = [0,0,-1];
+x = [1,0,0];
+y = [0,1,0];
+z = [0,0,1];
+
+// properties of the last instance of rod/box/ball in the call stack
+$parent_size=[0,0,0];
+$parent_bounds=[0,0,0];
+$parent_radius=0;
+$parent_type="space";
+// a stack of classes used by all ancestors
+$_ancestor_classes = [];
+
+//inhereted properties common to all geometric primitives in relativity.scad
+// indicates the class(es) to render
+$_show = "*";
+// indicates the class that is either assigned-to or inherited-by an object
+$class = [];
+// indicates the absolute position of a primitive
+$position = [0,0,0];
+// a vector indicating the direction of a parent object		
+$inward = [0,0,0];		
+$outward = [0,0,0];
+
+//hadamard product (aka "component-wise" product) for vectors
+function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
+
+// form repeating patterns through translation
+module translated(offset, n=[1], class="*"){
+	show(class)
+	for(i=n)
+		_translate(offset*i)
+			children();
+	hide(class)
+		children();
+}
+
+// form radially symmetric objects around the z axis
+module rotated(offset, n=[1], class="*"){
+	show(class)
+	for(i=n)
+		rotate(offset*i)
+			children();
+	hide(class)
+		children();
+}
+
+// form bilaterally symmetric objects using the mirror() function
+module mirrored(axes=[0,0,0], class="*"){
+	show(class)
+	mirror(axes)
+		children();
+	show(class)
+		children();
+	hide(class)
+		children();
+}
+
+module attach(class){
+	_assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
+	_assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
+	children();
+}
+
+module show(class="*"){
+	_assign($_show=["and", $_show, _sizzle_parse(class)])
+	children();
+}
+
+module hide(class="*"){
+	_assign($_show=["and", $_show, ["not", _sizzle_parse(class)]])
+	children();
+}
+
+module hulled(class="*"){
+	if(_sizzle_engine($_ancestor_classes, $_show))
+	hull()
+	_assign($_show=_sizzle_parse(class))
+	children();
+	
+	hide(class)
+	children();
+}
+
+// performs the union on objects marked as positive space (i.e. objects where $class = positive), 
+// and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
+module differed(negative, positive="*", unaffected=undef){
+	_positive = _sizzle_parse(positive);
+	_negative = _sizzle_parse(negative);
+	_unaffected = unaffected != undef? 
+        _sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]];
+    
+    if(_sizzle_engine($_ancestor_classes, $_show))
+    difference(){
+        _assign($_show = _positive)
+            children();
+        _assign($_show = _negative)
+            children();
+    }
+    _assign($_show=["and", $_show, _unaffected])
+        children();
+}
+
+// performs the intersection on a list of object classes
+module intersected(class1, class2, unaffected=undef){
+	class1 = _sizzle_parse(class1);
+	class2 = _sizzle_parse(class2);
+	unaffected = unaffected != undef? 
+		unaffected : ["not", ["or", class1, class2]];
+    
+    if(_sizzle_engine($_ancestor_classes, $_show))
+    intersection(){
+        _assign($_show = class1)
+            children();
+        _assign($_show = class2)
+            children();
+    }
+    _assign($_show=["and", $_show, unaffected])
+        children();
+}
+
+// like translate(), but use positions relative to the size of the parent object
+// if tilt==true, child objects will also be oriented away from the parent object's center
+module align(anchors){
+	anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors;
+	for(anchor=anchors)
+	{
+		_translate(hadamard(anchor, $parent_bounds)/2)
+		_assign($outward = anchor, $inward = -anchor)
+			children();
+	}
+}
+
+// like rotate(), but works by aligning the zaxis to a given vector
+module orient(zaxes, roll=0){
+	zaxes = len(zaxes.x) == undef && zaxes.x != undef? [zaxes] : zaxes;
+	for(zaxis=zaxes)
+	{
+		rotate(_orient_angles(zaxis))
+		rotate(roll*z)
+			children();
+	}
+}
+
+// duplicates last instance of box/rod/ball in the call stack
+// useful for performing hull() or difference() between parent and child 
+module parent(size=undef, anchor=center){
+	echo("WARNING: parent() module is depreciated. Please use CSG operators such as differed() and hulled().");
+	size = size==undef? $parent_size : size;
+	if($parent_type=="box") 
+		box(size, anchor=anchor)
+			children();
+	else if($parent_type=="rod")
+		rod(size, anchor=anchor)
+			children();
+	else if($parent_type=="ball")
+		ball(size, anchor=anchor)
+			children();
+}
+
+// wrapper for cube with enhanced centering functionality and cascading children
+module box(	size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=$inward, bounds="box") {
+    
+	d = r!=undef? 2*r : d;
+	size =	len(size)==undef && size!= undef? 
+                [size,size,size] 
+            : d != undef && h == undef? 
+                [d,d,indeterminate] 
+            : d == undef && h != undef? 
+                [indeterminate, indeterminate, h] 
+            : d != undef && h != undef?
+                [d,d,h] 
+            : 
+                size
+            ;
+                
+	_assign($parent_size = size, 
+			$parent_type="box", 
+			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
+							size.y < indeterminate/2? size.y : 0,
+							size.z < indeterminate/2? size.z : 0],
+			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
+			$_ancestor_classes = _push($_ancestor_classes, tokenize($class)),
+			$inward=center, 
+			$outward=center){
+		_translate(-hadamard(anchor, $parent_size)/2)
+			if(_sizzle_engine($_ancestor_classes, $_show)) cube($parent_size, center=true);
+		_translate(-hadamard(anchor, $parent_bounds)/2)
+			children();
+	}
+}
+// wrapper for cylinder with enhanced centering functionality and cascading children
+module rod(	size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=$inward, orientation=top, bounds="rod") {
+                
+	d = r!=undef? 2*r : d;
+	size =	len(size)==undef && size!= undef? 
+                [size,size,size] 
+            : d != undef && h == undef? 
+                [d,d,indeterminate] 
+            : d == undef && h != undef? 
+                [indeterminate, indeterminate, h] 
+            : d != undef && h != undef?
+                [d,d,h] 
+            : 
+                size
+            ;
+    _bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1];
+                
+	_assign($parent_size = size, 
+			$parent_type="rod",
+			$parent_bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
+							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
+							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
+			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
+			$_ancestor_classes = _push($_ancestor_classes, tokenize($class)),
+			$inward=center, 
+			$outward=center){
+		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
+			if(_sizzle_engine($_ancestor_classes, $_show))
+				orient(orientation) 
+				resize($parent_size) 
+				cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
+		}
+		_translate(-hadamard(anchor, $parent_bounds)/2)
+			children();
+	}
+}
+// wrapper for cylinder with enhanced centering functionality and cascading children
+module ball(size=[1,1,1], 
+			h=undef, d=undef, r=undef, 
+			anchor=$inward, bounds="ball") {
+	//diameter is used internally to simplify the maths
+	d = r!=undef? 2*r : d;
+	size =	len(size)==undef && size!= undef? 
+                [size,size,size] 
+            : d != undef && h == undef? 
+                [d,d,d] 
+            : d == undef && h != undef? 
+                [h, h, h] 
+            : d != undef && h != undef?
+                [d,d,h] 
+            : 
+                size
+            ;
+                
+	_assign($parent_size = size, 
+			$parent_type="ball", 
+			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
+							size.y < indeterminate/2? size.y : 0,
+							size.z < indeterminate/2? size.z : 0],
+			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
+			$_ancestor_classes = _push($_ancestor_classes, tokenize($class)),
+			$inward=center, 
+			$outward=center ){
+		_translate(-hadamard(anchor, $parent_size)/2)
+			if(_sizzle_engine($_ancestor_classes, $_show)) 
+                resize($parent_size) 
+                sphere(d=$parent_size.x, center=true);
+		_translate(-hadamard(anchor, $parent_bounds)/2)
+			children();
+	}
+}
+
+
+
+
+module _assign(){
+    children();
+}
+
+//matrix rotation functions
+function _rotate_x_matrix(a)=
+							[[1,0,0,0], 
+                      [0,cos(a),-sin(a),0], 
+                      [0,sin(a),cos(a),0], 
+                      [0,0,0,1]]; 
+
+function _rotate_y_matrix(a)=
+							[[cos(a),0,sin(a),0], 
+                      [0,1,0,0], 
+                      [-sin(a),0,cos(a),0], 
+                      [0,0,0,1]]; 
+
+function _rotate_z_matrix(a)=
+							[[cos(a),-sin(a),0,0], 
+                      [sin(a),cos(a),0,0], 
+                      [0,0,1,0], 
+                      [0,0,0,1]]; 
+
+function _rotate_matrix(a)=_rotate_z_matrix(a.z)*_rotate_y_matrix(a.y)*_rotate_x_matrix(a.x);
+
+function _orient_angles(zaxis)=
+				[-asin(zaxis.y / norm(zaxis)),
+		  		 atan2(zaxis.x, zaxis.z),
+		  		 0];
+
+//private wrapper for translate(), tracks the position of children using a special variable, $position
+module _translate(offset){
+	_assign($position = $position + offset)
+	translate(offset)
+	children();
+}
+	
+        
+//echo(_stack_tokenize("baz"));
+//echo(_sizzle_parse("not(foo,bar)"));
+//echo(_sizzle_parse("baz"));
+//echo(_sizzle_parse("bar baz"));
+//echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("baz")));
+//echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("foo,bar")));
+//echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("not(foo,bar)")));
+//echo(_sizzle_engine([["bar", []],[]], _sizzle_parse("not(foo,bar)")));
+//echo(_sizzle_engine([["baz", []], [["bar", []],[]]], _sizzle_parse("bar baz")));
+function _sizzle_engine_ancestor(ancestors, sizzle) = 
+        //return true if any ancestor matches the sizzle
+        len(ancestors) <= 0?
+            false
+        : _sizzle_engine(_push([], ancestors[0]), sizzle)?
+            true
+        : 
+            _sizzle_engine_ancestor(_pop(ancestors), sizzle)
+        ;
+function _sizzle_engine(classes, sizzle) = 
+	//is sizzle a string?
+	sizzle == str(sizzle)?
+		sizzle != "" && (sizzle == "*" || _has_token(classes[0], sizzle))
+	//is sizzle a known operator?
+	: sizzle[0] == "or"?
+		_sizzle_engine(classes, sizzle[1]) || _sizzle_engine(classes, sizzle[2])
+	: sizzle[0] == "not"?
+		!_sizzle_engine(classes, sizzle[1])
+	: sizzle[0] == "and"?
+		_sizzle_engine(classes, sizzle[1]) && _sizzle_engine(classes, sizzle[2])
+	: sizzle[0] == "descendant"? // parameters: descendant, ancestor
+		_sizzle_engine(_push([], classes[0]), sizzle[1]) && _sizzle_engine_ancestor(_pop(classes), sizzle[2])
+	: sizzle[0] == "child"? // parameters: child, parent
+		_sizzle_engine(_push([], classes[0]), sizzle[1]) && _sizzle_engine_ancestor(_push([], _pop(classes)[0]), sizzle[2])
+	: //invalid syntax
+		false
+	;
+
+function _sizzle_parse(sizzle) = 
+	sizzle == ""?
+		""
+	: 
+		_sizzle_DFA(
+			_stack_tokenize(sizzle, ignore_space=false)
+		);
+
+//echo(_sizzle_DFA(_stack_tokenize("not(foo,bar)")));
+//echo(_sizzle_DFA(_stack_tokenize("foo,bar baz")));
+//echo(_sizzle_DFA(_stack_tokenize("foo bar,baz")));
+//echo(_sizzle_DFA(_stack_tokenize("foo.bar,baz")));
+//simulates a deterministic finite automaton that parses tokenized sizzle strings
+function _sizzle_DFA(in, ops=[], args=[]) = 
+	len(in) <= 0?
+		len(ops) <= 0?
+			args[0]
+		:
+			_sizzle_DFA(in,		_pop(ops),		_push_sizzle_op(args, ops[0]))
+	:in[0] == "not"?
+			_sizzle_DFA(_pop(in),	_push(ops, "not"),	args)
+	:in[0] == ","?
+			_sizzle_DFA(_pop(in),	_push(ops, "or"),	args)
+	:in[0] == "."?
+			_sizzle_DFA(_pop(in),	_push(ops, "and"),	args)
+   :trim(in[0]) == ""?
+			_sizzle_DFA(_pop(in),	_push(ops, "descendant"),args)
+	:in[0] == "("?
+			_sizzle_DFA(_pop(in),	_push(ops, "("),		args)
+	:in[0] == ")"?
+		ops[0] == "("?
+			_sizzle_DFA(_pop(in),	_pop(ops),			args)
+		:
+			_sizzle_DFA(in,		_pop(ops),				_push_sizzle_op(args, ops[0]))
+	:
+			_sizzle_DFA(_pop(in),	ops,                _push(args, in[0]))
+	;
+        
+function _push_sizzle_op(args, op) = 
+	op == "or" || op == "and" || op == "descendant"?
+		_push(
+			_pop(args, 2),
+			[op, args[0], args[1][0]]
+		)
+	:			//unary
+		_push(
+			_pop(args),
+			[op, args[0]]
+		)
+	;
+	
+//echo(_has_token(["baz",[]], "baz"));
+//echo(_has_token(tokenize("foo bar baz"), "baz"));
+function _has_token(tokens, token) = 
+	tokens == undef || len(tokens) <= 0?
+		false
+	: 
+        any([for (i = [0:len(tokens)-1]) tokens[i] == token])
+	;	
+
+//returns a stack representing the tokenization of an input string
+//stacks are used due to limitations in OpenSCAD when processing lists
+//stacks are represented through nested right associative lists
+//echo(_stack_tokenize("not(foo)"));
+//echo(_stack_tokenize("foo bar baz  "));
+function _stack_tokenize(string, pos=0, ignore_space=true) = 
+	pos >= len(string)?
+		[]
+	:
+		_push(	
+			_stack_tokenize(string, 
+				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space), 
+				ignore_space=ignore_space),
+			between(string, 
+				_token_start(string, pos, ignore_space=ignore_space), 
+				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space)
+			)
+		)
+	;
+
+
 
 _digit = "0123456789";
 _lowercase = "abcdefghijklmnopqrstuvwxyz";
@@ -435,14 +886,6 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 		undef
 	;
 
-function token(string, index, pos=0) = 
-	index == 0?
-		_coalesce_on(between(string, _token_start(string, pos), _token_end(string, pos)),
-				"",
-				undef)
-	:
-		token(string, index-1, _token_end(string, pos))
-	;
 //returns a list representing the tokenization of an input string
 //echo(tokenize("not(foo)"));
 //echo(tokenize("foo bar baz  "));
