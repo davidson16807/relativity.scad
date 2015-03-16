@@ -99,11 +99,9 @@ module hide(class="*"){
 
 module hulled(class="*"){
 	if(_sizzle_engine($_ancestor_classes, $_show))
-	hull(){
+	hull()
 	_assign($_show=_sizzle_parse(class))
 	children();
-        echo("hulled");
-    }
 	
 	hide(class)
 	children();
