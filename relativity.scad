@@ -463,6 +463,13 @@ _nonsymbol = str(_alphanumeric, _whitespace);
 
 _regex_ops = "?*+&|";
 
+function strings_version() =
+	[2014, 3, 17];
+function strings_version_num() =
+	20141226;
+
+
+
 
 
 
@@ -683,7 +690,7 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, _push(ops, "{"),	_push(args, ["", []]), 			i+1)
 			
 			
-	: _is_in(rx[i], _regex_ops)?
+	: is_in(rx[i], _regex_ops)?
 		_can_shunt(ops, rx[i])?
 			_parse_rx(rx, _push(ops, rx[i]), args, 		 		i+1)
 		:
@@ -721,7 +728,7 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 	
 function _can_concat(regex, i) = 
 	regex[i-1] != undef &&
-	(!_is_in(regex[i-1], "|(") || regex[i-2] == "\\");
+	(!is_in(regex[i-1], "|(") || regex[i-2] == "\\");
 	
 function _can_shunt(stack, op) = 
 	stack[0] == "(" || 
@@ -729,7 +736,7 @@ function _can_shunt(stack, op) =
 	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
 	
 function _push_rx_op(stack, op) = 
-	_is_in(op[0], "[?*+")? // is unary?
+	is_in(op[0], "[?*+")? // is unary?
 		_push(_pop(stack), 	[op, stack[0]])
 	: 		 	// is binary?
 		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
@@ -819,33 +826,33 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 			
 	//ESCAPE CHARACTER
 	: regex == "\\d"?
-		_is_in(string[string_pos], _digit)?
+		is_in(string[string_pos], _digit)?
 			string_pos+1
 		: 
 			undef
 	: regex == "\\s"?
-		_is_in(string[string_pos], _whitespace)?
+		is_in(string[string_pos], _whitespace)?
 			string_pos+1
 		: 
 			undef
 	: regex == "\\w"?
-		_is_in(string[string_pos], _alphanumeric)?
+		is_in(string[string_pos], _alphanumeric)?
 			string_pos+1
 		: 
 			undef
 	: regex == "\\D"?
-		!_is_in(string[string_pos], _digit)?
+		!is_in(string[string_pos], _digit)?
 			string_pos+1
 		: 
 			undef
 				
 	: regex == "\\S"?
-		!_is_in(string[string_pos], _whitespace)?
+		!is_in(string[string_pos], _whitespace)?
 			string_pos+1
 		: 
 			undef
 	: regex == "\\W"?
-		!_is_in(string[string_pos], _alphanumeric)?
+		!is_in(string[string_pos], _alphanumeric)?
 			string_pos+1
 		: 
 			undef
@@ -895,7 +902,7 @@ function _token_start(string, pos=0, ignore_space=true) =
 		undef
 	: pos == len(string)?
 		len(string)
-	: _is_in(string[pos], _whitespace) && ignore_space?
+	: is_in(string[pos], _whitespace) && ignore_space?
 		_match_set(string, _whitespace, pos)
 	: //symbol
 		pos
@@ -905,9 +912,9 @@ function _token_start(string, pos=0, ignore_space=true) =
 function _token_end(string, pos=0, token_characters=_variable_safe, ignore_space=true, tokenize_quotes=true) = 
 	pos >= len(string)?
 		len(string)
-	: _is_in(string[pos], token_characters) ?
+	: is_in(string[pos], token_characters) ?
 		_match_set(string, token_characters, pos)
-	: _is_in(string[pos], _whitespace) ? (
+	: is_in(string[pos], _whitespace) ? (
 		ignore_space?
 			_token_end(string, _match_set(string, _whitespace, pos))
 		:
@@ -955,29 +962,10 @@ function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=f
 			undef
 	);
 	
-function _is_in_stack(string, stack, ignore_case=false) = 
-	stack == undef?
-		false
-	: len(stack) <= 0?
-		false
-	: stack[0][0] == "-"?
-		_is_in_range(string, stack[0][1], stack[0][2])
-	: string == stack[0]?
-		true
-	: ignore_case && lower(string) == lower(stack[0])?
-		true
-	:
-		_is_in_stack(string, _pop(stack), ignore_case=ignore_case)
-	;
-	
-function _is_in_range(char, min_char, max_char) = 
-	search(char, _alphanumeric,0)[0][0] >= search(min_char, _alphanumeric,0)[0][0] &&
-	search(char, _alphanumeric,0)[0][0] <= search(max_char, _alphanumeric,0)[0][0];
-
 function _match_set(string, set, pos) = 
 	pos >= len(string)?
 		len(string)
-	: _is_in(string[pos], set )?
+	: is_in(string[pos], set )?
 		_match_set(string, set, pos+1)
 	: 
 		pos
@@ -986,7 +974,7 @@ function _match_set(string, set, pos) =
 function _match_set_reverse(string, set, pos) = 
 	pos <= 0?
 		0
-	: _is_in(string[pos-1], set)?
+	: is_in(string[pos-1], set)?
 		_match_set_reverse(string, set, pos-1)
 	: 
 		pos
@@ -1003,24 +991,26 @@ function _match_quote(string, quote_char, pos) =
 		_match_quote(string, quote_char, pos+1)
 	;
 
-
-// quicker in theory, but slow in practice due to generated warnings
-//function _is_in(string, set, index=0) = 
-//	len(search(string[index],set)) > 0;
-function _is_in(char, string, index=0, ignore_case=false) = 
-	char == undef?
+	
+function _is_in_range(char, min_char, max_char) = 
+	search(char, _alphanumeric,0)[0][0] >= search(min_char, _alphanumeric,0)[0][0] &&
+	search(char, _alphanumeric,0)[0][0] <= search(max_char, _alphanumeric,0)[0][0];
+function _is_in_stack(string, stack, ignore_case=false) = 
+	stack == undef?
 		false
-	: ignore_case?
-		_is_in(lower(char), lower(string))
-	: index >= len(string)?
+	: len(stack) <= 0?
 		false
-	: char == string[index]?
+	: stack[0][0] == "-"?
+		_is_in_range(string, stack[0][1], stack[0][2])
+	: string == stack[0]?
+		true
+	: ignore_case && lower(string) == lower(stack[0])?
 		true
 	:
-		_is_in(char, string, index+1)
+		_is_in_stack(string, _pop(stack), ignore_case=ignore_case)
 	;
 
-function equals(this, that, ignore_case=false) =
+function equals(this, that, ignore_case=false) = 
 	ignore_case?
 		lower(this) == lower(that)
 	:
@@ -1033,38 +1023,25 @@ function lower(string) =
 function upper(string) = 
 	_transform_case(string, search(string, "abcdefghijklmnopqrstuvwxyz",0), 65);
 
-function _transform_case(string, encoded, offset, index=0) = 
-	index >= len(string)?
-		""
-	: len(encoded[index]) <= 0?
-		str(substring(string, index, 1),	_transform_case(string, encoded, offset, index+1))
-	: 
-		str(chr(encoded[index][0]+offset),	_transform_case(string, encoded, offset, index+1))
+//TODO: convert to list comprehensions
+function _transform_case(string, encodings, offset) = 
+    join([for (i = [0:len(encodings)-1])
+            len(encodings[i]) > 0?
+                chr(encodings[i][0] + offset)
+            :
+                string[i]
+    ])
 	;
 
 
-
-function join(strings, delimeter) = 
-	strings == undef?
-		undef
-	: strings == []?
-		""
-	: _join(strings, len(strings)-1, delimeter, 0);
-
-function _join(strings, index, delimeter) = 
-	index==0 ? 
-		strings[index] 
-	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
-	
-function reverse(string, i=0) = 
+function reverse(string) = 
 	string == undef?
 		undef
 	: len(string) <= 0?
 		""
-	: i <= len(string)-1?
-		str(reverse(string, i+1), string[i])
-	:
-		"";
+	: 
+        join([for (i = [0:len(string)-1]) string[len(string)-1-i]])
+    ;
 
 function substring(string, start, length=undef) = 
 	length == undef? 
@@ -1100,7 +1077,7 @@ function between(string, start, end) =
 	: start == end ? 
 		"" 
 	: 
-		str(string[start], between(string, start+1, end))
+        join([for (i=[start:end-1]) string[i]])
 	;
 
 function before(string, index=0) = 
@@ -1113,7 +1090,7 @@ function before(string, index=0) =
 	: index <= 0?
 		""
 	: 
-		str(before(string, index-1), string[index-1])
+        join([for (i=[0:index-1]) string[i]])
 	;
 
 function after(string, index=0) =
@@ -1126,9 +1103,12 @@ function after(string, index=0) =
 	: index >= len(string)-1?
 		""
 	:
-		str(string[index+1], after(string, index+1))
+        join([for (i=[index+1:len(string)-1]) string[i]])
 	;
 	
+
+	
+
 function parse_int(string, base=10, i=0, nb=0) = 
 	string[0] == "-" ? 
 		-1*_parse_int(string, base, 1) 
@@ -1141,7 +1121,40 @@ function _parse_int(string, base, i=0, nb=0) =
 	: 
 		nb + _parse_int(string, base, i+1, 
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
-
+                
+function join(strings, delimeter="") = 
+	strings == undef?
+		undef
+	: strings == []?
+		""
+	: _join(strings, len(strings)-1, delimeter, 0);
+function _join(strings, index, delimeter) = 
+	index==0 ? 
+		strings[index] 
+	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
+	
+function is_in(string, list, ignore_case=false) = 
+	string == undef?
+		false
+    : 
+        any([ for (i = [0:len(list)-1]) equals(string, list[i], ignore_case=ignore_case) ])
+	;
+function any(booleans, index=0) = 
+    index > len(booleans)?
+        false
+    : booleans[index]?
+        true
+    :
+        any(booleans, index+1)
+    ;
+function all(booleans, index=0) = 
+	index >= len(booleans)?
+		true
+	: !booleans[index]?
+		false
+	: 
+		all(booleans, index+1)
+	;
 
 function _null_coalesce(string, replacement) = 
 	string == undef?
