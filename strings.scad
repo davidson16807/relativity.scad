@@ -21,8 +21,10 @@ function strings_version_num() =
 
 
 
-function grep(string, pattern, index=0, ignore_case=false) = 		//string
-	_between_range(string, _index_of_regex(string, _parse_rx(pattern), index, ignore_case=ignore_case));
+function grep(string, pattern, ignore_case=false) = 		//string
+    [for (index = _index_of_regex(string, pattern, ignore_case=ignore_case))
+        between(string, index.x, index.y)
+    ];
 
 
 
@@ -40,10 +42,6 @@ function _replace(string, replacement, indices, i=0) =
         str( between(string, indices[i-1].y, indices[i].x), replacement, _replace(string, replacement, indices, i+1) )
     ;
 
-echo([
-    index_of("foo bar baz", "ba[rz]", regex=true),
-    _replace("foo bar baz", "boo", index_of("foo bar baz", "ba[rz]", regex=true)),
-]);
 
 
 function split(string, seperator=" ", ignore_case = false, regex=false) = 
@@ -57,10 +55,6 @@ function _split(string, indices, i=0) =
     :
         concat( between(string, indices[i-1].y, indices[i].x), _split(string, indices, i+1) )
     ;
-echo([
-    index_of("foo bar baz", "ba[rz]", regex=true),
-    _split("foo bar baz", index_of("foo bar baz", "ba[rz]", regex=true)),
-]);
 
 
 
@@ -74,6 +68,9 @@ function contains(string, substring, ignore_case=false, regex=false) =
 	
 
 
+echo([
+    _index_of("foobar", "o",3),
+]);
 function index_of(string, pattern, ignore_case=false, regex=false) = 
 	regex?
 		_index_of_regex(string, _parse_rx(pattern), ignore_case=ignore_case)
@@ -86,31 +83,26 @@ function _index_of(string, pattern, pos=0, ignore_case=false) = 		//[start,end]
 	:
         _index_of_recurse(string, pattern, 
             _index_of_first(string, pattern, pos=pos, ignore_case=ignore_case),
-            index, pos, ignore_case)
+            pos, ignore_case)
 	;
-function _index_of_recurse(string, pattern, index_of_first, pos, ignore_case) = 
-    concat(
+function _index_of_recurse(string, pattern, index_of_first=undef, pos=0, ignore_case=false) =
+    index_of_first == [undef]?
+        []
+    : concat(
         [index_of_first],
         _coalesce_on(
             _index_of(string, pattern, 
-                            pos = index_of_first.y,
-                            ignore_case=ignore_case),
+                    pos = index_of_first.y,
+                    ignore_case=ignore_case),
             undef,
             [])
     );
 function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false) = 
-	string == undef?
+	pos >= len(string)?
 		undef
-	: pattern == undef?
-		undef
-	: pos < 0 || pos == undef?
-		undef
-	: pos >= len(string)?
-		undef
-	: starts_with(string, pattern, pos, ignore_case=ignore_case)?
-		[pos, pos+len(pattern)]
-	:
-		_index_of_first(string, pattern, pos+1, ignore_case=ignore_case)
+	: _coalesce_on([pos, starts_with(string, pattern, pos, ignore_case=ignore_case)? pos+len(pattern) : undef], 
+		[pos, undef],
+		_index_of_first(string, pattern, pos+1, ignore_case=ignore_case));
 	;
     
 function _index_of_regex(string, pattern, pos=0, ignore_case=false) = 		//[start,end]
@@ -592,12 +584,6 @@ function substring(string, start, length=undef) =
 		between(string, start, length+start)
 	;
 
-function _between_range(string, vector) = 
-	vector == undef?
-		undef
-	: 
-		between(string, vector.x, vector.y)
-	;
 //note: start is inclusive, end is exclusive
 function between(string, start, end) = 
 	string == undef?
