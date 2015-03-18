@@ -72,12 +72,13 @@ function _index_of(string, pattern, pos=0, regex=false, ignore_case=false) = 		/
 	pos == undef?
         undef
 	: pos >= len(string)?
-		undef
+		[]
 	:
         _index_of_recurse(string, pattern, 
             _index_of_first(string, pattern, pos=pos, regex=regex, ignore_case=ignore_case),
             pos, regex, ignore_case)
 	;
+
 function _index_of_recurse(string, pattern, index_of_first, pos, regex, ignore_case) = 
     index_of_first == undef?
         []
