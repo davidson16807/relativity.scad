@@ -10,10 +10,12 @@ _nonsymbol = str(_alphanumeric, _whitespace);
 
 _regex_ops = "?*+&|";
 
-function strings_version() =
+_strings_version = 
 	[2014, 3, 17];
+function strings_version() =
+	_strings_version;
 function strings_version_num() =
-	20141226;
+	_strings_version.x * 1000 + _strings_version.y * 100 + _strings_version.z;
 
 
 
@@ -27,15 +29,12 @@ function grep(string, pattern, ignore_case=false) = 		//string
     ];
 
 
-
-
-
 function replace(string, replaced, replacement, ignore_case=false, regex=false) = 
 	_replace(string, replacement, index_of(string, replaced, ignore_case=ignore_case, regex=regex));
     
 function _replace(string, replacement, indices, i=0) = 
     i >= len(indices)?
-        after(string, indices[len(indices)-1].y)
+        after(string, indices[len(indices)-1].y-1)
     : i == 0?
         str( before(string, indices[0].x), replacement, _replace(string, replacement, indices, i+1) )
     :
@@ -43,21 +42,17 @@ function _replace(string, replacement, indices, i=0) =
     ;
 
 
-
 function split(string, seperator=" ", ignore_case = false, regex=false) = 
 	_split(string, index_of(string, seperator, ignore_case=ignore_case, regex=regex));
     
 function _split(string, indices, i=0) = 
     i >= len(indices)?
-        _coalesce_on(after(string, indices[len(indices)-1].y), "", [])
+        _coalesce_on(after(string, indices[len(indices)-1].y-1), "", [])
     : i == 0?
         concat( _coalesce_on(before(string, indices[0].x), "", []), _split(string, indices, i+1) )
     :
         concat( between(string, indices[i-1].y, indices[i].x), _split(string, indices, i+1) )
     ;
-
-
-
 
 function contains(string, substring, ignore_case=false, regex=false) = 
 	regex?
@@ -69,7 +64,10 @@ function contains(string, substring, ignore_case=false, regex=false) =
 
 
 function index_of(string, pattern, ignore_case=false, regex=false) = 
-	_index_of(string, regex? _parse_rx(pattern) : pattern, regex=regex, ignore_case=ignore_case);
+	_index_of(string, 
+        regex? _parse_rx(pattern) : pattern, 
+        regex=regex, 
+        ignore_case=ignore_case);
 function _index_of(string, pattern, pos=0, regex=false, ignore_case=false) = 		//[start,end]
 	pos == undef?
         undef
@@ -140,8 +138,6 @@ function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 		_parse_rx(pattern), 
 		pos, 
 		ignore_case=ignore_case);
-
-
 	
 //converts an infix notated regex string to a parse tree using the shunting yard algorithm
 function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) = 
@@ -464,7 +460,7 @@ function trim(string) =
 function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) = 
     pos == undef?
         undef
-    : pos >= len(string)?
+    : pos > len(string)?
         undef
 	: _null_coalesce(
 		_match_repetition(string, regex, min_reps-1, max_reps-1, 
