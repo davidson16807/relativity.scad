@@ -388,23 +388,23 @@ function _sizzle_DFA(in, ops=[], args=[], pos=0) =
 			args[0]
 		:
 			_sizzle_DFA(in,	_pop(ops),			_push_sizzle_op(args, ops[0]), pos)
-	:in[0] == "not"?
+	:in[pos] == "not"?
 			_sizzle_DFA(in,	_push(ops, "not"),	args, 					pos+1)
-	:in[0] == ","?
+	:in[pos] == ","?
 			_sizzle_DFA(in,	_push(ops, "or"),	args, 					pos+1)
-	:in[0] == "."?
+	:in[pos] == "."?
 			_sizzle_DFA(in,	_push(ops, "and"),	args, 					pos+1)
-   :trim(in[0]) == ""?
+   :trim(in[pos]) == ""?
 			_sizzle_DFA(in,	_push(ops, "descendant"),args, 				pos+1)
-	:in[0] == "("?
+	:in[pos] == "("?
 			_sizzle_DFA(in,	_push(ops, "("),	args, 					pos+1)
-	:in[0] == ")"?
+	:in[pos] == ")"?
 		ops[0] == "("?
 			_sizzle_DFA(in,	_pop(ops),			args, 					pos+1)
 		:
 			_sizzle_DFA(in,	_pop(ops),			_push_sizzle_op(args, ops[0]), pos)
 	:
-			_sizzle_DFA(in,	ops,                _push(args, in[0]), 	pos+1)
+			_sizzle_DFA(in,	ops,                _push(args, in[pos]), 	pos+1)
 	;
         
 function _push_sizzle_op(args, op) = 
