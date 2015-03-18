@@ -84,18 +84,17 @@ echo([	"tokenize:",
 	tokenize(test)[4] == "bar2",
 	tokenize(test)[5] == ")",
 	tokenize(test)[6] == undef,
+    
+	tokenize(test, ignore_space=false)[0] == "foo",
+	tokenize(test, ignore_space=false)[1] == "  ",
+	tokenize(test, ignore_space=false)[2] == "(",
+	tokenize(test, ignore_space=false)[3] == "1",
+	tokenize(test, ignore_space=false)[4] == ",",
+	tokenize(test, ignore_space=false)[5] == " ",
+	tokenize(test, ignore_space=false)[6] == "bar2",
+	tokenize(test, ignore_space=false)[7] == ")",
+	tokenize(test, ignore_space=false)[8] == undef,
 ]);
-
-echo([	"_token_end:",
-	_token_end(" ", 0),
-	_token_end(test, 0) ==3,
-	_token_end(test, 3) ==6,
-	_token_end(test, 6) ==7,
-	_token_end(test, 7) ==8,
-	_token_end(test, 8) ==13,
-	_token_end(test, 13)==14,
-	_token_end(test, 14)==14,
-	]);
 
 echo([	"trim:",
 	trim(" foo ") == "foo",
@@ -280,13 +279,13 @@ echo([
 ]);
 echo([
     "index_of:",
-	index_of("foobar", "o"),
-	index_of("foobar foobar", "oo"),
-	index_of("foobar", "Bar"),
+	index_of("foobar", "o") == [[1,2], [2,3]],
+	index_of("foobar foobar", "oo") == [[1,3], [8,10]],
+	index_of("foobar", "Bar") == [],
 	index_of("foobar", "Bar", ignore_case=true) == [[3,6]],
 	index_of("foo bar baz", "ba[rz]", regex=true) == [[4,7], [8,11]],
 	index_of("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == [[4,7], [8,11]],
-	index_of("", "x")
+	index_of("", "x") == []
 ]);
 echo([
     "grep:",
@@ -316,3 +315,4 @@ echo([
 	split("", "fo+", regex=true) == undef,
 	split(regex_test, "FO+", regex=true, ignore_case=true) == ["baz", "barbaz"],
 ]);
+
