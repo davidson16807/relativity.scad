@@ -57,7 +57,9 @@ function split(string, seperator=" ", ignore_case = false, regex=false) =
 	_split(string, index_of(string, seperator, ignore_case=ignore_case, regex=regex));
     
 function _split(string, indices, i=0) = 
-    i >= len(indices)?
+    len(indices) == 0?
+        [string]
+    : i >= len(indices)?
         _coalesce_on(after(string, indices[len(indices)-1].y-1), "", [])
     : i == 0?
         concat( _coalesce_on(before(string, indices[0].x), "", []), _split(string, indices, i+1) )
