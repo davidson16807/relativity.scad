@@ -26,7 +26,7 @@ function strings_version_num() =
 //echo(tokenize("not(foo)"));
 //echo(tokenize("foo bar baz  "));
 _token_regex = _parse_rx("\\w+|\\S");
-_token_regex_ignore_space = _parse_rx("\\w+|\\S|\\s");
+_token_regex_ignore_space = _parse_rx("\\w+|\\S|\\s+");
 function tokenize(string, ignore_space=true) = 
     ignore_space?
         _grep(string, _index_of(string, _token_regex, regex=true))
