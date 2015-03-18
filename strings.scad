@@ -15,7 +15,7 @@ _strings_version =
 function strings_version() =
 	_strings_version;
 function strings_version_num() =
-	_strings_version.x * 1000 + _strings_version.y * 100 + _strings_version.z;
+	_strings_version.x * 10000 + _strings_version.y * 100 + _strings_version.z;
 
 
 
@@ -25,14 +25,12 @@ function strings_version_num() =
 //returns a list representing the tokenization of an input string
 //echo(tokenize("not(foo)"));
 //echo(tokenize("foo bar baz  "));
-_token_regex = _parse_rx("\\w+|\\S");
-_token_regex_ignore_space = _parse_rx("\\w+|\\S|\\s+");
+_token_regex_ignore_space = _parse_rx("\\w+|\\S");
+_token_regex = _parse_rx("\\w+|\\S|\\s+");
 function tokenize(string, ignore_space=true) = 
-    ignore_space?
-        _grep(string, _index_of(string, _token_regex, regex=true))
-    :
-        _grep(string, _index_of(string, _token_regex_ignore_space, regex=true))
-    ;
+    _tokenize(string, ignore_space? _token_regex_ignore_space : _token_regex);
+function _tokenize(string, pattern) = 
+    _grep(string, _index_of(string, pattern, regex=true));
 
 function grep(string, pattern, ignore_case=false) = 		//string
     _grep(string, _index_of(string, _parse_rx(pattern), regex=true, ignore_case=ignore_case));
