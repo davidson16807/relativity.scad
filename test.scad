@@ -74,37 +74,9 @@ echo([	"starts_with:",
 echo(["ends_with:", ends_with("foobar", "bar")]);
 
 
-echo(["index_of", 	
-	index_of("foobar", "o") == 1,
-	index_of("foobar", "o", 1) == 2,
-	index_of("foobar", "o", -1) == undef,
-	index_of("foobar foobar", "oo")==1,
-	index_of("foobar foobar", "oo", 1)==8,
-	index_of("foobar", "Bar") == undef,
-	index_of("foobar", "Bar", ignore_case=true) == 3]);
-
-echo([	"split:",
-	split("", " ", 0) == "",
-	split(test, " ", -1) == undef,
-	split(test, " ", 0) == "foo",
-	split(test, " ", 1) == "",
-	split(test, " ", 2) == "(1,",
-	split(test, " ", 3) == "bar2)",
-	split(test, " ", 4) == undef,
-	split(test, " ", 5) == undef,
-	split("foo", " ") == "foo",
-]);
-
-echo(["replace", 	
-	replace("foobar", "oo", "ee") == "feebar",
-	replace("foobar foobar", "oo", "ee") == "feebar feebar",
-	replace("foobar", "OO", "ee", ignore_case=true) == "feebar",
-	replace("foobar foobar", "OO", "ee", ignore_case=true) == "feebar feebar",
-]);
 
 echo([	"tokenize:",
 	tokenize(" ") == [""],
-	tokenize(test)[-1] == undef,
 	tokenize(test)[0] == "foo",
 	tokenize(test)[1] == "(",
 	tokenize(test)[2] == "1",
@@ -235,6 +207,7 @@ echo([
 	_parse_rx("a?*+"),
 ]);
 
+
 echo([
 	"_match_parsed_rx:",
 	"literals",
@@ -280,7 +253,7 @@ echo([
 	_match_parsed_rx("o", ["[", [["-", "a", "z"], []]], 0) ==1,
 	_match_parsed_rx("g", ["[", [["-", "a", "z"], []]], 0) ==1,
 	_match_parsed_rx("0", "\\d", 0) ==1,
-	_match_parsed_rx("a", "\\d", 0) ==1,
+	_match_parsed_rx("a", "\\d", 0) == undef,
 	
 ]);
 
@@ -294,40 +267,52 @@ echo([
 	_match_regex("foobarbaz", "[a-z]*") == 9,
 	_match_regex("foobarbaz", "[f-o]*") == 3,
 	_match_regex("012345", "[^a-z]*") == 6,
-	_match_regex("foobarbaz", "[^a-z]*") == undef,
-	_match_regex("foobarbaz", "[^f-o]*") == undef,
+	_match_regex("foobarbaz", "[^a-z]*"),// == undef,
+	_match_regex("foobarbaz", "[^f-o]*"),
 ]);
 
 echo([
-	"regex:",
+	"contains:",
 	contains("foo bar baz", "ba[rz]", regex=true) == true,
 	contains("foo bar baz", "spam", regex=true) == false,
-	index_of("foo bar baz", "ba[rz]", regex=true) == [4,7],
-	index_of("foo bar baz", "ba[rz]", 1, regex=true) == [8,11],
-	grep("foo bar baz", "ba[rz]", regex=true) == "bar",
-	grep("foo bar baz", "ba[rz]", 1, regex=true) == "baz",
-	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d", regex=true), 
-	replace("foo bar baz", "ba[rz]", "spam", regex=true) == "foo spam spam",
-	split(regex_test, "fo+", 0, regex=true) == "",
-	split(regex_test, "fo+", 1, regex=true) == "baz",
-	split(regex_test, "fo+", 2, regex=true) == "barbaz",
-	split(regex_test, "fo+", 3, regex=true) == undef,
-	split("bazfoobar", "fo+", 0, regex=true) == "baz",
-	split("bazfoobar", "fo+", 1, regex=true) == "bar",
-	split("bazfoobar", "fo+", 2, regex=true) == undef,
-	split("", "fo+", 0, regex=true) == "",
-	split("", "fo+", 1, regex=true) == undef,
-	
 	contains("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == true,
 	contains("foo bar baz", "SPAM", regex=true, ignore_case=true) == false,
-	index_of("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == [4,7],
-	index_of("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == [8,11],
-	grep("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == "bar",
-	grep("foo bar baz", "BA[RZ]", 1, regex=true, ignore_case=true) == "baz",
-	replace("foo bar baz", "BA[RZ]", "spam", regex=true, ignore_case=true) == "foo spam spam",
-	split(regex_test, "FO+", 0, regex=true, ignore_case=true) == "",
-	split(regex_test, "FO+", 1, regex=true, ignore_case=true) == "baz",
-	split(regex_test, "FO+", 2, regex=true, ignore_case=true) == "barbaz",
-	split(regex_test, "FO+", 3, regex=true, ignore_case=true) == undef,
 ]);
-
+echo([
+    "index_of:",
+	index_of("foobar", "o"),
+	index_of("foobar foobar", "oo"),
+	index_of("foobar", "Bar"),
+	index_of("foobar", "Bar", ignore_case=true) == [[3,6]],
+	index_of("foo bar baz", "ba[rz]", regex=true) == [[4,7], [8,11]],
+	index_of("foo bar baz", "BA[RZ]", regex=true, ignore_case=true) == [[4,7], [8,11]],
+	index_of("", "x")
+]);
+echo([
+    "grep:",
+	grep("foo bar baz", "ba[rz]") == ["bar", "baz"],
+	grep("foo bar baz", "BA[RZ]") == [],
+	grep("foo 867-5309 baz", "\\d\\d\\d-?\\d\\d\\d\\d") == ["867-5309"], 
+	grep("foo bar baz", "BA[RZ]", ignore_case=true) == ["bar", "baz"],
+]);
+echo([
+    "replace:",
+	replace("foobar", "oo", "ee") == "feebar",
+	replace("foobar foobar", "oo", "ee") == "feebar feebar",
+	replace("foobar", "OO", "ee", ignore_case=true) == "feebar",
+	replace("foobar foobar", "OO", "ee", ignore_case=true) == "feebar feebar",
+	replace("foo bar baz", "ba[rz]", "boo", regex=true) == "foo boo boo",
+	replace("foo bar baz", "BA[RZ]", "spam", regex=true, ignore_case=true) == "foo spam spam",
+]);
+echo([
+    "split:",
+	split("", " "),
+	split(test, " "),
+	split(test, " "),
+	split("foo", " "),
+	split(regex_test, "fo+", regex=true),
+	split("bazfoobar", "fo+", regex=true),
+	split("", "fo+", regex=true) == "",
+	split("", "fo+", regex=true) == undef,
+	split(regex_test, "FO+", regex=true, ignore_case=true) == ["baz", "barbaz"],
+]);
