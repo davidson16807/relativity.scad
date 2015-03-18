@@ -22,9 +22,22 @@ function strings_version_num() =
 
 
 
+//returns a list representing the tokenization of an input string
+//echo(tokenize("not(foo)"));
+//echo(tokenize("foo bar baz  "));
+_token_regex = _parse_rx("\\w+|\\S");
+_token_regex_ignore_space = _parse_rx("\\w+|\\S|\\s");
+function tokenize(string, ignore_space=true) = 
+    ignore_space?
+        _grep(string, _index_of(string, _token_regex, regex=true))
+    :
+        _grep(string, _index_of(string, _token_regex_ignore_space, regex=true))
+    ;
 
 function grep(string, pattern, ignore_case=false) = 		//string
-    [for (index = _index_of(string, _parse_rx(pattern), regex=true, ignore_case=ignore_case))
+    _grep(string, _index_of(string, _parse_rx(pattern), regex=true, ignore_case=ignore_case));
+function _grep(string, indices) = 
+    [for (index = indices)
         between(string, index.x, index.y)
     ];
 
@@ -78,7 +91,6 @@ function _index_of(string, pattern, pos=0, regex=false, ignore_case=false) = 		/
             _index_of_first(string, pattern, pos=pos, regex=regex, ignore_case=ignore_case),
             pos, regex, ignore_case)
 	;
-
 function _index_of_recurse(string, pattern, index_of_first, pos, regex, ignore_case) = 
     index_of_first == undef?
         []
@@ -386,55 +398,6 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 		undef
 	;
 
-//returns a list representing the tokenization of an input string
-//echo(tokenize("not(foo)"));
-//echo(tokenize("foo bar baz  "));
-function tokenize(string, pos=0, ignore_space=true) = 
-	pos >= len(string)?
-		[]
-	:
-		concat(
-			between(string, 
-				_token_start(string, pos, ignore_space=ignore_space), 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space)
-			),
-			tokenize(string, 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space), 
-				ignore_space=ignore_space)
-		)
-	;
-
-function _token_start(string, pos=0, ignore_space=true) = 
-	pos >= len(string)?
-		undef
-	: pos == len(string)?
-		len(string)
-	: is_in(string[pos], _whitespace) && ignore_space?
-		_match_set(string, _whitespace, pos)
-	: //symbol
-		pos
-	;
-	
-
-function _token_end(string, pos=0, token_characters=_variable_safe, ignore_space=true, tokenize_quotes=true) = 
-	pos >= len(string)?
-		len(string)
-	: is_in(string[pos], token_characters) ?
-		_match_set(string, token_characters, pos)
-	: is_in(string[pos], _whitespace) ? (
-		ignore_space?
-			_token_end(string, _match_set(string, _whitespace, pos))
-		:
-			_match_set(string, _whitespace, pos)
-	)
-	
-	: string[pos] == "\"" && tokenize_quotes ?
-		_match_quote(string, "\"", pos+1)
-	: string[pos] == "'" && tokenize_quotes?
-		_match_quote(string, "'", pos+1)
-	: 
-		pos+1
-	;
 
 function is_empty(string) = 
 	string == "";
