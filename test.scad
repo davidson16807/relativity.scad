@@ -76,7 +76,7 @@ echo(["ends_with:", ends_with("foobar", "bar")]);
 
 
 echo([	"tokenize:",
-	tokenize(" ") == [""],
+	tokenize(" ") == [],
 	tokenize(test)[0] == "foo",
 	tokenize(test)[1] == "(",
 	tokenize(test)[2] == "1",
@@ -85,6 +85,7 @@ echo([	"tokenize:",
 	tokenize(test)[5] == ")",
 	tokenize(test)[6] == undef,
     
+	tokenize(" ", ignore_space=false) == [" "],
 	tokenize(test, ignore_space=false)[0] == "foo",
 	tokenize(test, ignore_space=false)[1] == "  ",
 	tokenize(test, ignore_space=false)[2] == "(",
