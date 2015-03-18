@@ -331,7 +331,6 @@ module _translate(offset){
 }
 	
         
-//echo(_stack_tokenize("baz"));
 //echo(_sizzle_parse("not(foo,bar)"));
 //echo(_sizzle_parse("baz"));
 //echo(_sizzle_parse("bar baz"));
@@ -368,42 +367,44 @@ function _sizzle_engine(classes, sizzle) =
 		false
 	;
 
+_sizzle_token_regex = _parse_rx("(\\w|_|-)+|\\S|\\s+");
 function _sizzle_parse(sizzle) = 
 	sizzle == ""?
 		""
 	: 
 		_sizzle_DFA(
-			_stack_tokenize(sizzle, ignore_space=false)
-		);
+			_tokenize(sizzle, _sizzle_token_regex)
+		)
+    ;
 
-//echo(_sizzle_DFA(_stack_tokenize("not(foo,bar)")));
-//echo(_sizzle_DFA(_stack_tokenize("foo,bar baz")));
-//echo(_sizzle_DFA(_stack_tokenize("foo bar,baz")));
-//echo(_sizzle_DFA(_stack_tokenize("foo.bar,baz")));
+//echo(_sizzle_DFA(_tokenize("not(foo,bar)")));
+//echo(_sizzle_DFA(_tokenize("foo,bar baz")));
+//echo(_sizzle_DFA(_tokenize("foo bar,baz")));
+//echo(_sizzle_DFA(_tokenize("foo.bar,baz")));
 //simulates a deterministic finite automaton that parses tokenized sizzle strings
-function _sizzle_DFA(in, ops=[], args=[]) = 
-	len(in) <= 0?
+function _sizzle_DFA(in, ops=[], args=[], pos=0) = 
+	pos >= len(in)?
 		len(ops) <= 0?
 			args[0]
 		:
-			_sizzle_DFA(in,		_pop(ops),		_push_sizzle_op(args, ops[0]))
+			_sizzle_DFA(in,	_pop(ops),			_push_sizzle_op(args, ops[0]), pos)
 	:in[0] == "not"?
-			_sizzle_DFA(_pop(in),	_push(ops, "not"),	args)
+			_sizzle_DFA(in,	_push(ops, "not"),	args, 					pos+1)
 	:in[0] == ","?
-			_sizzle_DFA(_pop(in),	_push(ops, "or"),	args)
+			_sizzle_DFA(in,	_push(ops, "or"),	args, 					pos+1)
 	:in[0] == "."?
-			_sizzle_DFA(_pop(in),	_push(ops, "and"),	args)
+			_sizzle_DFA(in,	_push(ops, "and"),	args, 					pos+1)
    :trim(in[0]) == ""?
-			_sizzle_DFA(_pop(in),	_push(ops, "descendant"),args)
+			_sizzle_DFA(in,	_push(ops, "descendant"),args, 				pos+1)
 	:in[0] == "("?
-			_sizzle_DFA(_pop(in),	_push(ops, "("),		args)
+			_sizzle_DFA(in,	_push(ops, "("),	args, 					pos+1)
 	:in[0] == ")"?
 		ops[0] == "("?
-			_sizzle_DFA(_pop(in),	_pop(ops),			args)
+			_sizzle_DFA(in,	_pop(ops),			args, 					pos+1)
 		:
-			_sizzle_DFA(in,		_pop(ops),				_push_sizzle_op(args, ops[0]))
+			_sizzle_DFA(in,	_pop(ops),			_push_sizzle_op(args, ops[0]), pos)
 	:
-			_sizzle_DFA(_pop(in),	ops,                _push(args, in[0]))
+			_sizzle_DFA(in,	ops,                _push(args, in[0]), 	pos+1)
 	;
         
 function _push_sizzle_op(args, op) = 
@@ -428,25 +429,6 @@ function _has_token(tokens, token) =
         any([for (i = [0:len(tokens)-1]) tokens[i] == token])
 	;	
 
-//returns a stack representing the tokenization of an input string
-//stacks are used due to limitations in OpenSCAD when processing lists
-//stacks are represented through nested right associative lists
-//echo(_stack_tokenize("not(foo)"));
-//echo(_stack_tokenize("foo bar baz  "));
-function _stack_tokenize(string, pos=0, ignore_space=true) = 
-	pos >= len(string)?
-		[]
-	:
-		_push(	
-			_stack_tokenize(string, 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space), 
-				ignore_space=ignore_space),
-			between(string, 
-				_token_start(string, pos, ignore_space=ignore_space), 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space)
-			)
-		)
-	;
 
 
 
@@ -461,154 +443,117 @@ _nonsymbol = str(_alphanumeric, _whitespace);
 
 _regex_ops = "?*+&|";
 
-function strings_version() =
+_strings_version = 
 	[2014, 3, 17];
+function strings_version() =
+	_strings_version;
 function strings_version_num() =
-	20141226;
+	_strings_version.x * 10000 + _strings_version.y * 100 + _strings_version.z;
 
 
 
 
 
 
+//returns a list representing the tokenization of an input string
+//echo(tokenize("not(foo)"));
+//echo(tokenize("foo bar baz  "));
+_token_regex_ignore_space = _parse_rx("\\w+|\\S");
+_token_regex = _parse_rx("\\w+|\\S|\\s+");
+function tokenize(string, ignore_space=true) = 
+    _tokenize(string, ignore_space? _token_regex_ignore_space : _token_regex);
+function _tokenize(string, pattern) = 
+    _grep(string, _index_of(string, pattern, regex=true));
 
-function grep(string, pattern, index=0, ignore_case=false) = 		//string
-	_between_range(string, _index_of_regex(string, _parse_rx(pattern), index, ignore_case=ignore_case));
-
-
-
-
-
-function replace(string, replaced, replacement, ignore_case=false, regex=false) = 	//string
-	regex?
-		_replace_regex(string, _parse_rx(replaced), replacement, ignore_case=ignore_case)
-	: string == undef?
-		undef
-	: contains(string, replaced, ignore_case=ignore_case)?
-		str(	before(string, index_of(string, replaced, ignore_case=ignore_case)),
-			replacement,
-			replace(after(string, index_of(string, replaced, ignore_case=ignore_case)+len(replaced)-1), 
-				replaced, replacement, ignore_case=ignore_case)
-		)
-	: 
-		string
-	;
-function _replace_regex(string, pattern, replacement, ignore_case=false) = 	//string
-	string == undef?
-		undef
-	: 
-		_replace_between_range(string, pattern, replacement, 
-			_index_of_regex(string, pattern, ignore_case=ignore_case),
-			ignore_case = ignore_case
-		)
-	;
-function _replace_between_range(string, pattern, replacement, range, ignore_case=false) = 
-	range != undef?
-		str(	before(string, range.x),
-			replacement,
-			_replace_regex(after(string, range.y-1), 
-				pattern, replacement,
-				ignore_case=ignore_case)
-		)
-	: 
-		string
-	;
+function grep(string, pattern, ignore_case=false) = 		//string
+    _grep(string, _index_of(string, _parse_rx(pattern), regex=true, ignore_case=ignore_case));
+function _grep(string, indices) = 
+    [for (index = indices)
+        between(string, index.x, index.y)
+    ];
 
 
+function replace(string, replaced, replacement, ignore_case=false, regex=false) = 
+	_replace(string, replacement, index_of(string, replaced, ignore_case=ignore_case, regex=regex));
+    
+function _replace(string, replacement, indices, i=0) = 
+    i >= len(indices)?
+        after(string, indices[len(indices)-1].y-1)
+    : i == 0?
+        str( before(string, indices[0].x), replacement, _replace(string, replacement, indices, i+1) )
+    :
+        str( between(string, indices[i-1].y, indices[i].x), replacement, _replace(string, replacement, indices, i+1) )
+    ;
 
 
-function split(string, seperator=" ", index=0, pos=0, ignore_case = false, regex=false) = 
-	regex?
-		_split_regex(string, _parse_rx(seperator), index, ignore_case=ignore_case)
-	: index < 0?
-		undef
-	: index == 0?
-		between(string, pos, 
-			_null_coalesce(	_index_of_first(string, seperator, pos=pos, ignore_case=ignore_case), 
-					len(string)+1))
-	:
-		split(string, seperator, 
-			index-1,
-			_null_coalesce(	_index_of_first(string, seperator, pos=pos, ignore_case=ignore_case)+len(seperator), 
-					len(string)+1),
-			ignore_case=ignore_case)
-	;
-function _split_regex(string, pattern, index, pos=0, ignore_case=false) =
-	index < 0?
-		undef
-	: index == 0?
-		between(string, pos, 
-			_null_coalesce(	_index_of_first_regex(string, pattern, pos=pos, ignore_case=ignore_case).x, 
-					len(string)+1))
-	:
-		_split_regex(string, pattern, 
-			index-1, 
-			_null_coalesce(	_index_of_first_regex(string, pattern, pos=pos, ignore_case=ignore_case).y, 
-					len(string)+1), 
-			ignore_case=ignore_case)
-	;
-
-
-
+function split(string, seperator=" ", ignore_case = false, regex=false) = 
+	_split(string, index_of(string, seperator, ignore_case=ignore_case, regex=regex));
+    
+function _split(string, indices, i=0) = 
+    i >= len(indices)?
+        _coalesce_on(after(string, indices[len(indices)-1].y-1), "", [])
+    : i == 0?
+        concat( _coalesce_on(before(string, indices[0].x), "", []), _split(string, indices, i+1) )
+    :
+        concat( between(string, indices[i-1].y, indices[i].x), _split(string, indices, i+1) )
+    ;
 
 function contains(string, substring, ignore_case=false, regex=false) = 
 	regex?
-		_contains_regex(string, _parse_rx(substring), ignore_case=ignore_case)
+        _index_of_first(string, _parse_rx(substring), regex=regex, ignore_case=ignore_case) != undef
 	:
-		index_of(string, substring, ignore_case=ignore_case) != undef
+		_index_of_first(string, substring, regex=regex, ignore_case=ignore_case) != undef
 	; 
-function _contains_regex(string, pattern, ignore_case=false) = 			//bool		
-	_index_of_regex(string, pattern, ignore_case=ignore_case) != undef;
 	
 
 
-function index_of(string, pattern, index=0, pos=0, ignore_case=false, regex=false) = 
-	regex?
-		_index_of_regex(string, _parse_rx(pattern), index, ignore_case=ignore_case)
-	: len(pattern) == 1 && !ignore_case?
-		search(pattern, after(string, pos), 0)[0][index] + pos + 1
-	: index <= 0?
-		_index_of_first(string, pattern, pos, ignore_case=ignore_case)
-	: 
-		index_of(string, pattern, index-1, 
-			pos = _index_of_first(string, pattern, ignore_case=ignore_case) + len(pattern),
-			ignore_case=ignore_case)
-	;
-
-function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false) = 
-	string == undef?
-		undef
-	: pattern == undef?
-		undef
-	: pos < 0 || pos == undef?
-		undef
+function index_of(string, pattern, ignore_case=false, regex=false) = 
+	_index_of(string, 
+        regex? _parse_rx(pattern) : pattern, 
+        regex=regex, 
+        ignore_case=ignore_case);
+function _index_of(string, pattern, pos=0, regex=false, ignore_case=false) = 		//[start,end]
+	pos == undef?
+        undef
 	: pos >= len(string)?
-		undef
-	: starts_with(string, pattern, pos, ignore_case=ignore_case)?
-		pos
+		[]
 	:
-		_index_of_first(string, pattern, pos+1, ignore_case=ignore_case)
+        _index_of_recurse(string, pattern, 
+            _index_of_first(string, pattern, pos=pos, regex=regex, ignore_case=ignore_case),
+            pos, regex, ignore_case)
 	;
-function _index_of_regex(string, pattern, index=0, pos=0, ignore_case=false) = 		//[start,end]
-	index == 0?
-		_index_of_first_regex(string, pattern, pos, ignore_case=ignore_case)
-	:
-		_index_of_regex(string, pattern, 
-			index = index-1,
-			pos = _index_of_first_regex(string, pattern, index=0, pos=pos, ignore_case=ignore_case).y,
-			ignore_case=ignore_case)
-	;
-function _index_of_first_regex(string, pattern, pos=0, ignore_case=false) =
-	pos >= len(string)?
+function _index_of_recurse(string, pattern, index_of_first, pos, regex, ignore_case) = 
+    index_of_first == undef?
+        []
+    : concat(
+        [index_of_first],
+        _coalesce_on(
+            _index_of(string, pattern, 
+                    pos = index_of_first.y,
+                    regex=regex,
+                    ignore_case=ignore_case),
+            undef,
+            [])
+    );
+function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false) =
+	pos == undef?
+        undef
+    : pos >= len(string)?
 		undef
-	: _coalesce_on([pos, _match_parsed_rx(string, pattern, pos, ignore_case=ignore_case)], 
+	: _coalesce_on([pos, _match(string, pattern, pos, regex=regex, ignore_case=ignore_case)], 
 		[pos, undef],
-		_index_of_first_regex(string, pattern, pos+1, ignore_case=ignore_case));
-
-
-
-
-
+		_index_of_first(string, pattern, pos+1, regex=regex, ignore_case=ignore_case))
+    ;
+function _match(string, pattern, pos, regex=false, ignore_case=false) = 
+    regex?
+        _match_parsed_rx(string, pattern, pos, ignore_case=ignore_case)
+    : starts_with(string, pattern, pos, ignore_case=ignore_case)? 
+        pos+len(pattern) 
+    : 
+        undef
+    ;
+    
+    
 function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
 	regex?
 		_match_parsed_rx(string,
@@ -637,8 +582,6 @@ function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 		_parse_rx(pattern), 
 		pos, 
 		ignore_case=ignore_case);
-
-
 	
 //converts an infix notated regex string to a parse tree using the shunting yard algorithm
 function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) = 
@@ -886,55 +829,6 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 		undef
 	;
 
-//returns a list representing the tokenization of an input string
-//echo(tokenize("not(foo)"));
-//echo(tokenize("foo bar baz  "));
-function tokenize(string, pos=0, ignore_space=true) = 
-	pos >= len(string)?
-		[]
-	:
-		concat(
-			between(string, 
-				_token_start(string, pos, ignore_space=ignore_space), 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space)
-			),
-			tokenize(string, 
-				_token_end(string, pos, token_characters=str(_alphanumeric, "_-"), ignore_space=ignore_space), 
-				ignore_space=ignore_space)
-		)
-	;
-
-function _token_start(string, pos=0, ignore_space=true) = 
-	pos >= len(string)?
-		undef
-	: pos == len(string)?
-		len(string)
-	: is_in(string[pos], _whitespace) && ignore_space?
-		_match_set(string, _whitespace, pos)
-	: //symbol
-		pos
-	;
-	
-
-function _token_end(string, pos=0, token_characters=_variable_safe, ignore_space=true, tokenize_quotes=true) = 
-	pos >= len(string)?
-		len(string)
-	: is_in(string[pos], token_characters) ?
-		_match_set(string, token_characters, pos)
-	: is_in(string[pos], _whitespace) ? (
-		ignore_space?
-			_token_end(string, _match_set(string, _whitespace, pos))
-		:
-			_match_set(string, _whitespace, pos)
-	)
-	
-	: string[pos] == "\"" && tokenize_quotes ?
-		_match_quote(string, "\"", pos+1)
-	: string[pos] == "'" && tokenize_quotes?
-		_match_quote(string, "'", pos+1)
-	: 
-		pos+1
-	;
 
 function is_empty(string) = 
 	string == "";
@@ -959,10 +853,14 @@ function trim(string) =
 	;
 
 function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) = 
-	_null_coalesce(
+    pos == undef?
+        undef
+    : pos > len(string)?
+        undef
+	: _null_coalesce(
 		_match_repetition(string, regex, min_reps-1, max_reps-1, 
-			_match_parsed_rx(string, regex, pos, ignore_case=ignore_case)
-			, ignore_case=ignore_case),
+			_match_parsed_rx(string, regex, pos, ignore_case=ignore_case), 
+            ignore_case=ignore_case),
 		(min_reps== undef || min_reps <= 0) && (max_reps == undef || max_reps >= 0)?
 			pos
 		: 
@@ -1057,12 +955,6 @@ function substring(string, start, length=undef) =
 		between(string, start, length+start)
 	;
 
-function _between_range(string, vector) = 
-	vector == undef?
-		undef
-	: 
-		between(string, vector.x, vector.y)
-	;
 //note: start is inclusive, end is exclusive
 function between(string, start, end) = 
 	string == undef?
