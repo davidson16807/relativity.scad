@@ -146,13 +146,21 @@ module intersected(class1, class2, unaffected=undef){
 
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
-module align(anchors){
+module align(anchors, bounds="box"){
 	anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors;
 	for(anchor=anchors)
 	{
+		if(bounds == "box")
 		_translate(hadamard(anchor, $parent_bounds)/2)
 		_assign($outward = anchor, $inward = -anchor)
 			children();
+		
+		if(bounds == "ball"){
+			_anchor = _rotate_matrix(_orient_angles(anchor)) * [0,0,1,1];
+			_translate(hadamard(_anchor, $parent_bounds)/2)
+			_assign($outward = anchor, $inward = -anchor)
+				children();
+		}
 	}
 }
 
