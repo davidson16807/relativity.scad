@@ -276,31 +276,30 @@ module pelvis(){
 	}
 }
 
+
 module arm(){
-	assign($class="humerus"){
-		ball(d=1/4*unit, anchor=center)
-		align(y)
-		box(point, $class="pectoralis-major muscle")
-		box(point, $class="latisimus-dorsi muscle");
+    ball(d=1/4*unit, anchor=center, $class="humerus")
+    align(y)
+    box(point, $class="pectoralis-major muscle")
+    box(point, $class="latisimus-dorsi muscle");
 
-		translate(2*unit*y)
-		ball(d=1/4*unit, anchor=center){
-			ball(d=1/4*unit, anchor=z, $class="condyle");
-			ball(d=1/4*unit, anchor=-z, $class="condyle");
-			align(y){
-				ball(d=1/4*unit, anchor=-y+z, $class="ulna");
-				ball(d=1/8*unit, anchor=-y-z, $class="radius");
-				translate(1.75*unit*y){
-					ball(d=1/8*unit, anchor=y-z, $class="radius")
-					assign($class="wrist")
-					children();
+    translate(2*unit*y)
+    ball(d=1/4*unit, anchor=center, $class="humerus"){
+        ball(d=1/4*unit, anchor=z, $class="condyle");
+        ball(d=1/4*unit, anchor=-z, $class="condyle");
+        align(y){
+            ball(d=1/4*unit, anchor=-y+z, $class="ulna");
+            ball(d=1/8*unit, anchor=-y-z, $class="radius");
+            translate(1.75*unit*y){
+                ball(d=1/8*unit, anchor=y-z, $class="radius")
+                assign($class="wrist")
+                children();
 
-					//hand
-					ball(d=1/8*unit, anchor=y+z, $class="ulna");
-				}
-			}
-		}
-	}
+                //hand
+                ball(d=1/8*unit, anchor=y+z, $class="ulna");
+            }
+        }
+    }
 }
 
 module hand(){
