@@ -278,25 +278,25 @@ module pelvis(){
 
 
 module arm(){
-    ball(d=1/4*unit, anchor=center, $class="humerus")
+    ball(d=1/4*unit, anchor=center, $class="humerus bone")
     align(y)
     box(point, $class="pectoralis-major muscle")
     box(point, $class="latisimus-dorsi muscle");
 
     translate(2*unit*y)
-    ball(d=1/4*unit, anchor=center, $class="humerus"){
-        ball(d=1/4*unit, anchor=z, $class="condyle");
-        ball(d=1/4*unit, anchor=-z, $class="condyle");
+    ball(d=1/4*unit, anchor=center, $class="humerus bone"){
+        ball(d=1/4*unit, anchor=z, $class="condyle bone");
+        ball(d=1/4*unit, anchor=-z, $class="condyle bone");
         align(y){
-            ball(d=1/4*unit, anchor=-y+z, $class="ulna");
-            ball(d=1/8*unit, anchor=-y-z, $class="radius");
+            ball(d=1/4*unit, anchor=-y+z, $class="ulna bone");
+            ball(d=1/8*unit, anchor=-y-z, $class="radius bone");
             translate(1.75*unit*y){
-                ball(d=1/8*unit, anchor=y-z, $class="radius")
+                ball(d=1/8*unit, anchor=y-z, $class="radius bone")
                 assign($class="wrist")
                 children();
 
                 //hand
-                ball(d=1/8*unit, anchor=y+z, $class="ulna");
+                ball(d=1/8*unit, anchor=y+z, $class="ulna bone");
             }
         }
     }
