@@ -3,9 +3,8 @@ relativity.scad
 
 ##The OpenSCAD General Library of Relativity##
 
-This OpenSCAD library adds functionality to size, position, and orient objects relative to other geometric primitives.   
-
-To do so, the library introduces a new set of modules to replace the default geometric primitives in OpenSCAD. These new primitives have the ability to align themselves, and any child object, relative to their own size.  
+This library adds functionality to size, position, and orient objects relative to other geometric primitives.   
+The library introduces a new set of modules to replace the default geometric primitives in OpenSCAD. These new primitives have the ability to align themselves, and any child object, relative to their own size.  
 
 So this:  
 
@@ -24,7 +23,13 @@ becomes this:
 	align([1,0,0])
 	rod(d=7, h=$parent_size.z);
 
-The library also includes a number of optional replacement modules that help to perform CSG operations while using this new approach 
+But the library does more. Way more. The library does to OpenSCAD what css does for html:
+
+*It seperates presentation from content.*
+
+You can build a single model that defines all the parts of a project and how they interact, then create a presentation layer to isolate a printable part using [show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) or [hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide). You can also go the opposite way - you can define a series of components, then define attachment points for each and use [attach](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach) to pop them into place like lego blocks.
+
+Here's a full listing of CSG operations
 
 Module | Description
 --------- | --------------
@@ -34,5 +39,8 @@ translated | form repeating patterns by repeated calls to `translate() `
 [hulled](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hulled) | performs `hull` between objects of a given class
 [intersected](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#intersected) | performs `difference` between objects of a given class
 [differed](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#differed) | performs `difference` between one class of objects and another
+[show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) | renders only the specified class 
+[hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide) | renders everything but the specified class 
+[attach](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach) | attaches child to the parent at an attachment point of a given class
 
 For more information, check out the [wiki](https://github.com/davidson16807/relativity.scad/wiki)!
