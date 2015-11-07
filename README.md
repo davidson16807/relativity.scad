@@ -23,7 +23,11 @@ becomes this:
 	align([1,0,0])
 	rod(d=7, h=$parent_size.z);
 
-But the library does more. Way more. The library does to OpenSCAD what css does for html - it seperates presentation from content. You can build a single model that defines all the parts of a project and how they interact, then create a presentation layer to isolate a printable part using [show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) or [hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide). You can also go the opposite way - you can define a series of components, then define attachment points for each and use [attach](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach) to pop them into place like lego blocks.
+But the library does more. Way more. The library does to OpenSCAD what css does for html:
+
+*It seperates presentation from content.*
+
+You can build a single model that defines all the parts of a project and how they interact, then create a presentation layer to isolate a printable part using [show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) or [hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide). You can also go the opposite way - you can define a series of components, then define attachment points for each and use [attach](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach) to pop them into place like lego blocks.
 
 Here's a full listing of CSG operations
 
