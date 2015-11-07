@@ -23,7 +23,7 @@ becomes this:
 	align([1,0,0])
 	rod(d=7, h=$parent_size.z);
 
-But the library does more. Way more. The library does to OpenSCAD what css does for html - it seperates presentation from content. You can build a single model that defines all the parts of a project and how they interact, then create a presentation layer to isolate a printable part using [show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) or [hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide). You can also go the opposite way - you can define a series of components, then define attachment points for each and use [attach]((https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach)) to pop them into place like lego blocks.
+But the library does more. Way more. The library does to OpenSCAD what css does for html - it seperates presentation from content. You can build a single model that defines all the parts of a project and how they interact, then create a presentation layer to isolate a printable part using [show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) or [hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide). You can also go the opposite way - you can define a series of components, then define attachment points for each and use [attach](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach)) to pop them into place like lego blocks.
 
 Here's a full listing of CSG operations
 
@@ -37,6 +37,6 @@ translated | form repeating patterns by repeated calls to `translate() `
 [differed](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#differed) | performs `difference` between one class of objects and another
 [show](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#show) | renders only the specified class 
 [hide](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#hide) | renders everything but the specified class 
-[attach]((https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach)) | attaches child to the parent at an attachment point of a given class
+[attach](https://github.com/davidson16807/relativity.scad/wiki/CSG-operations#attach)) | attaches child to the parent at an attachment point of a given class
 
 For more information, check out the [wiki](https://github.com/davidson16807/relativity.scad/wiki)!
