@@ -3,7 +3,7 @@ relativity.scad
 
 ##The OpenSCAD General Library of Relativity##
 
-This library does adds functionality to size, position, and orient objects relative to other geometric primitives.   
+This library adds functionality to size, position, and orient objects relative to other geometric primitives.   
 The library introduces a new set of modules to replace the default geometric primitives in OpenSCAD. These new primitives have the ability to align themselves, and any child object, relative to their own size.  
 
 So this:  
