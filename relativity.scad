@@ -752,6 +752,12 @@ module hide(class="*"){
 	children();
 }
 
+module colored(color, class="*"){
+	_assign($_show=["and", $_show, _sizzle_parse(class)])
+	color(color)
+	children();
+}
+
 module hulled(class="*"){
     _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
 	if(_sizzle_engine($_ancestor_classes, $_show))
