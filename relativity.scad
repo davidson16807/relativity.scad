@@ -756,6 +756,9 @@ module colored(color, class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	color(color)
 	children();
+	
+	hide(class)
+	children();
 }
 
 module hulled(class="*"){
