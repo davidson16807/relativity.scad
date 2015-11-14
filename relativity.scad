@@ -753,6 +753,7 @@ module hide(class="*"){
 }
 
 module hulled(class="*"){
+    _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
 	if(_sizzle_engine($_ancestor_classes, $_show))
 	hull()
 	_assign($_show=_sizzle_parse(class))
@@ -770,6 +771,7 @@ module differed(negative, positive="*", unaffected=undef){
 	_unaffected = unaffected != undef? 
         _sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]];
     
+    _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
     if(_sizzle_engine($_ancestor_classes, $_show))
     difference(){
         _assign($_show = _positive)
@@ -788,6 +790,7 @@ module intersected(class1, class2, unaffected=undef){
 	unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]];
     
+    _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
     if(_sizzle_engine($_ancestor_classes, $_show))
     intersection(){
         _assign($_show = class1)
