@@ -690,6 +690,7 @@ $parent_radius=0;
 $parent_type="space";
 // a stack of classes used by all ancestors
 $_ancestor_classes = [];
+_token_regex_ignore_dash = _parse_rx("(\\w|-)+|\\S");
 
 //inhereted properties common to all geometric primitives in relativity.scad
 // indicates the class(es) to render
@@ -737,7 +738,7 @@ module mirrored(axes=[0,0,0], class="*"){
 }
 
 module attach(class){
-	_assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
+	_assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
 	_assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
 	children();
 }
@@ -762,7 +763,7 @@ module colored(color, class="*"){
 }
 
 module hulled(class="*"){
-    _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
+    _assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
 	if(_sizzle_engine($_ancestor_classes, $_show))
 	hull()
 	_assign($_show=_sizzle_parse(class))
@@ -780,7 +781,7 @@ module differed(negative, positive="*", unaffected=undef){
 	_unaffected = unaffected != undef? 
         _sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]];
     
-    _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
+    _assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
     if(_sizzle_engine($_ancestor_classes, $_show))
     difference(){
         _assign($_show = _positive)
@@ -799,7 +800,7 @@ module intersected(class1, class2, unaffected=undef){
 	unaffected = unaffected != undef? 
 		unaffected : ["not", ["or", class1, class2]];
     
-    _assign($_ancestor_classes = _push($_ancestor_classes, tokenize($class)))
+    _assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
     if(_sizzle_engine($_ancestor_classes, $_show))
     intersection(){
         _assign($_show = class1)
@@ -882,7 +883,7 @@ module box(	size=[1,1,1],
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
-			$_ancestor_classes = _push($_ancestor_classes, tokenize($class)),
+			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
 			$inward=center, 
 			$outward=center){
 		_translate(-hadamard(anchor, $parent_size)/2)
@@ -916,7 +917,7 @@ module rod(	size=[1,1,1],
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
 							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
 			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
-			$_ancestor_classes = _push($_ancestor_classes, tokenize($class)),
+			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
 			$inward=center, 
 			$outward=center){
 		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
@@ -953,7 +954,7 @@ module ball(size=[1,1,1],
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
-			$_ancestor_classes = _push($_ancestor_classes, tokenize($class)),
+			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
 			$inward=center, 
 			$outward=center ){
 		_translate(-hadamard(anchor, $parent_size)/2)
@@ -1103,7 +1104,6 @@ function _has_token(tokens, token) =
 	: 
         any([for (i = [0:len(tokens)-1]) tokens[i] == token])
 	;	
-
 
 
 
