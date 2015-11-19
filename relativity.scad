@@ -762,6 +762,24 @@ module colored(color, class="*"){
 	children();
 }
 
+module scaled(v, class="*"){
+	_assign($_show=["and", $_show, _sizzle_parse(class)])
+	scale(v)
+	children();
+	
+	hide(class)
+	children();
+}
+
+module resized(newsize, class="*"){
+	_assign($_show=["and", $_show, _sizzle_parse(class)])
+	resize(newsize)
+	children();
+	
+	hide(class)
+	children();
+}
+
 module hulled(class="*"){
     _assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
 	if(_sizzle_engine($_ancestor_classes, $_show))
