@@ -762,7 +762,7 @@ module colored(color, class="*"){
 	children();
 }
 
-module scaled(v, class="*"){
+module scaled(v=[0,0,0], class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	scale(v)
 	children();
@@ -1088,7 +1088,9 @@ function _sizzle_DFA(in, ops=[], args=[], pos=0) =
 			_sizzle_DFA(in,	_push(ops, "or"),	args, 					pos+1)
 	:in[pos] == "."?
 			_sizzle_DFA(in,	_push(ops, "and"),	args, 					pos+1)
-   :trim(in[pos]) == ""?
+	:in[pos] == ">"?
+			_sizzle_DFA(in,	_push(ops, "child"),args, 					pos+1)
+    :trim(in[pos]) == ""?
 			_sizzle_DFA(in,	_push(ops, "descendant"),args, 				pos+1)
 	:in[pos] == "("?
 			_sizzle_DFA(in,	_push(ops, "("),	args, 					pos+1)
@@ -1102,7 +1104,7 @@ function _sizzle_DFA(in, ops=[], args=[], pos=0) =
 	;
         
 function _push_sizzle_op(args, op) = 
-	op == "or" || op == "and" || op == "descendant"?
+	op == "or" || op == "and" || op == "descendant" || op == "child"?
 		_push(
 			_pop(args, 2),
 			[op, args[0], args[1][0]]
