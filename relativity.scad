@@ -654,13 +654,13 @@ function _coalesce_on(value, error, fallback) =
 
 
 function relativity_version() =
-	[2014, 3, 17];
+	[2015, 11, 26];
 function relativity_version_num() = 
 	relativity_version().x * 10000 + relativity_version().y * 100 + relativity_version().z;
 echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y, ".", relativity_version().z));
 
-if(version_num() < 20140300)
-	echo("WARNING: relativity.scad requires OpenSCAD version 2013.03 or higher");
+if(version_num() < 20150000)
+	echo("WARNING: relativity.scad requires OpenSCAD version 2015.03 or higher");
 
 
 // an arbitrarily large number
