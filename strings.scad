@@ -7,6 +7,8 @@ _alphanumeric = str(_letter, _digit);
 _variable_safe = str(_alphanumeric, "_");
 _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
+_ascii = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+_hack = "\""; // used to work around syntax highlighter defficiencies in certain text editors
 
 _regex_ops = "?*+&|";
 
@@ -466,9 +468,10 @@ function _match_quote(string, quote_char, pos) =
 	;
 
 	
+
 function _is_in_range(char, min_char, max_char) = 
-	search(char, _alphanumeric,0)[0][0] >= search(min_char, _alphanumeric,0)[0][0] &&
-	search(char, _alphanumeric,0)[0][0] <= search(max_char, _alphanumeric,0)[0][0];
+	ascii_code(char) >= ascii_code(min_char) &&
+	ascii_code(char) <= ascii_code(max_char);
 function _is_in_stack(string, stack, ignore_case=false) = 
 	stack == undef?
 		false
@@ -607,6 +610,41 @@ function is_in(string, list, ignore_case=false) =
     : 
         any([ for (i = [0:len(list)-1]) equals(string, list[i], ignore_case=ignore_case) ])
 	;
+
+
+function _slice(array, start=0, end=-1) = 
+	array == undef?
+		undef
+	: start == undef?
+		undef
+	: start >= len(array)?
+		[]
+	: start < 0?
+		_slice(array, len(array)+start, end)
+	: end == undef?
+		undef
+	: end < 0?
+		_slice(array, start, len(array)+end)
+	: end >= len(array)?
+        undef
+    : start > end && start >= 0 && end >= 0?
+        _slice(array, end, start)
+	: 
+        [for (i=[start:end]) array[i]]
+	;
+function is_string(x) = 
+	x == str(x);
+
+function ascii_code(char) = 
+	len(char) != 1 || !is_string(char)?
+		undef
+	:
+		search(char, _ascii, 0)[0][0]
+	;
+
+
+
+
 function any(booleans, index=0) = 
     index > len(booleans)?
         false

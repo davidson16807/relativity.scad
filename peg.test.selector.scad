@@ -1,6 +1,6 @@
 include <peg.scad>
 
-_selector_grammar = 
+_css_peg = 
 _index_peg_refs
 (
 
@@ -35,32 +35,22 @@ _index_peg_refs
 		],
 		["private_rule", "operation",
 			["choice",
-				["ref", "child"],
 				["ref", "descendant"],
-				["ref", "not"],
+				["ref", "child"],
 				["ref", "and"],
 				["ref", "primitive"],
 			]
 		],
-		["rule", "not",
-			["sequence",
-				["private", ["zero_to_one", ["literal", ":"]]],
-				["private", ["literal", "not"]],
-				["ref", "primitive"],
-			]
-		],
-		["rule", "child",
-			["sequence",
-				["ref", "primitive"],
-				["private", ["literal", ">"]],
-				["ref", "operation"],
-			]
-		],
-		["rule", "descendant",
-			["sequence",
-				["ref", "primitive"],
-				["ref", "SPACE"],
-				["ref", "operation"],
+		["private_rule", "primitive",
+			["choice",
+				["ref", "wildcard"],
+				["ref", "not"],
+				["ref", "class"],
+				["sequence",
+					["private", ["literal","("]],
+					["ref", "operation"],
+					["private", ["literal",")"]],
+				]
 			]
 		],
 		["rule", "or",
@@ -70,21 +60,31 @@ _index_peg_refs
 				["ref", "selector"],
 			]
 		],
+		["rule", "descendant",
+			["sequence",
+				["ref", "primitive"],
+				["ref", "SPACE"],
+				["ref", "operation"],
+			]
+		],
+		["rule", "child",
+			["sequence",
+				["ref", "primitive"],
+				["private", ["literal", ">"]],
+				["ref", "operation"],
+			]
+		],
+		["rule", "not",
+			["sequence",
+				["private", ["zero_to_one", ["literal", ":"]]],
+				["private", ["literal", "not"]],
+				["ref", "primitive"],
+			]
+		],
 		["rule", "and",
 			["sequence",
 				["ref", "primitive"],
 				["ref", "operation"],
-			]
-		],
-		["private_rule", "primitive",
-			["choice",
-				["ref", "wildcard"],
-				["ref", "class"],
-				["sequence",
-					["private", ["literal","("]],
-					["ref", "operation"],
-					["private", ["literal",")"]],
-				]
 			]
 		],
 		["rule", "wildcard",
@@ -102,48 +102,50 @@ _index_peg_refs
 	]
 );
 
-echo(_unit_test("operation SPACE", 
+echo(_unit_test("selector SPACE", 
 	[
-		_match_parsed_peg( " ", _selector_grammar, peg_op=_get_rule(_selector_grammar, "SPACE")	)[_PARSED], [],
-		_match_parsed_peg( "", _selector_grammar, peg_op=_get_rule(_selector_grammar, "SPACE")	)[_PARSED], undef,
+		_match_parsed_peg( " ", _css_peg, peg_op=_get_rule(_css_peg, "SPACE")	)[_PARSED], [],
+		_match_parsed_peg( "", _css_peg, peg_op=_get_rule(_css_peg, "SPACE")	)[_PARSED], undef,
 	]
 ));
 
-echo(_unit_test("operation primitives", 
+echo(_unit_test("selector primitives", 
 	[
-		_match_parsed_peg( "*", _selector_grammar, peg_op=_get_rule(_selector_grammar, "wildcard")	)[_PARSED], [["wildcard"]],
-		_match_parsed_peg( ".foo", _selector_grammar, peg_op=_get_rule(_selector_grammar, "class")	)[_PARSED], [["class", "foo"]],
-		_match_parsed_peg( "foo", _selector_grammar, peg_op=_get_rule(_selector_grammar, "class")	)[_PARSED], [["class", "foo"]],
-		_match_parsed_peg( "*", _selector_grammar, peg_op=_get_rule(_selector_grammar, "primitive")	)[_PARSED], [["wildcard"]],
-		_match_parsed_peg( "foo", _selector_grammar, peg_op=_get_rule(_selector_grammar, "primitive")	)[_PARSED], [["class", "foo"]],
-		_match_parsed_peg( ".foo", _selector_grammar, peg_op=_get_rule(_selector_grammar, "primitive")	)[_PARSED], [["class", "foo"]],
+		_match_parsed_peg( "*", _css_peg, peg_op=_get_rule(_css_peg, "wildcard")	)[_PARSED], [["wildcard"]],
+		_match_parsed_peg( ".foo", _css_peg, peg_op=_get_rule(_css_peg, "class")	)[_PARSED], [["class", "foo"]],
+		_match_parsed_peg( "foo", _css_peg, peg_op=_get_rule(_css_peg, "class")	)[_PARSED], [["class", "foo"]],
+		_match_parsed_peg( "not(foo)", _css_peg, peg_op=_get_rule(_css_peg, "not") )[_PARSED], [["not", ["class", "foo"]]],
+		_match_parsed_peg( ":not(foo)", _css_peg, peg_op=_get_rule(_css_peg, "not") )[_PARSED], [["not", ["class", "foo"]]],
+		_match_parsed_peg( "*", _css_peg, peg_op=_get_rule(_css_peg, "primitive")	)[_PARSED], [["wildcard"]],
+		_match_parsed_peg( "foo", _css_peg, peg_op=_get_rule(_css_peg, "primitive")	)[_PARSED], [["class", "foo"]],
+		_match_parsed_peg( ".foo", _css_peg, peg_op=_get_rule(_css_peg, "primitive")	)[_PARSED], [["class", "foo"]],
+		_match_parsed_peg( "not(foo)", _css_peg, peg_op=_get_rule(_css_peg, "primitive") )[_PARSED], [["not", ["class", "foo"]]],
+		_match_parsed_peg( ":not(foo)", _css_peg, peg_op=_get_rule(_css_peg, "primitive") )[_PARSED], [["not", ["class", "foo"]]],
 	]
 ));
-echo("operation operation", 
+echo("selector operation", 
 	[
-		_match_parsed_peg( "foo.bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "and") )[_PARSED] == [["and", ["class", "foo"], ["class", "bar"]]],
-		_match_parsed_peg( ".foo.bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "and") )[_PARSED] == [["and", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( "foo.bar", _css_peg, peg_op=_get_rule(_css_peg, "and") )[_PARSED] == [["and", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( ".foo.bar", _css_peg, peg_op=_get_rule(_css_peg, "and") )[_PARSED] == [["and", ["class", "foo"], ["class", "bar"]]],
 		
-		_match_parsed_peg( "foo,bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
-		_match_parsed_peg( "foo,.bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
-		_match_parsed_peg( ".foo,bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
-		_match_parsed_peg( ".foo,.bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( "foo,bar", _css_peg, peg_op=_get_rule(_css_peg, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( "foo,.bar", _css_peg, peg_op=_get_rule(_css_peg, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( ".foo,bar", _css_peg, peg_op=_get_rule(_css_peg, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( ".foo,.bar", _css_peg, peg_op=_get_rule(_css_peg, "or") )[_PARSED] == [["or", ["class", "foo"], ["class", "bar"]]],
 
-		_match_parsed_peg( "foo>bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "child") )[_PARSED] == [["child", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( "foo>bar", _css_peg, peg_op=_get_rule(_css_peg, "child") )[_PARSED] == [["child", ["class", "foo"], ["class", "bar"]]],
 		
-		_match_parsed_peg( "foo bar", _selector_grammar, peg_op=_get_rule(_selector_grammar, "descendant") )[_PARSED] == [["descendant", ["class", "foo"], ["class", "bar"]]],
+		_match_parsed_peg( "foo bar", _css_peg, peg_op=_get_rule(_css_peg, "descendant") )[_PARSED] == [["descendant", ["class", "foo"], ["class", "bar"]]],
 		
-		_match_parsed_peg( "not(foo)", _selector_grammar, peg_op=_get_rule(_selector_grammar, "not") )[_PARSED] == [["not", ["class", "foo"]]],
-		
-		// _match_parsed_peg( "(foo)", _selector_grammar, peg_op=_get_rule(_selector_grammar, "and") )[_PARSED], [["class", "foo"]]
+		// _match_parsed_peg( "(foo)", _css_peg, peg_op=_get_rule(_css_peg, "and") )[_PARSED], [["class", "foo"]]
 		
 	]
 );
 
 
-echo("operation operation pairing", 
+echo("selector operation pairing", 
 	[
-		_match_parsed_peg( "foo.bar.baz", _selector_grammar, peg_op=_get_rule(_selector_grammar, "operation") )[_PARSED]
+		_match_parsed_peg( "foo.bar.baz", _css_peg, peg_op=_get_rule(_css_peg, "operation") )[_PARSED]
 			== [["and", 
 					["class", "foo"], 
 					["and", 
@@ -151,9 +153,74 @@ echo("operation operation pairing",
 						["class", "baz"]
 					]
 				]],
-		_match_parsed_peg( "foo,bar.baz", _selector_grammar, peg_op=_get_rule(_selector_grammar, "operation") )[_PARSED],
+		_match_parsed_peg( "foo>bar.baz", _css_peg, peg_op=_get_rule(_css_peg, "operation") )[_PARSED]
+			== [["child", 
+					["class", "foo"], 
+					["and", 
+						["class", "bar"], 
+						["class", "baz"]
+					]
+				]],
+		_match_parsed_peg( "foo.bar>baz", _css_peg, peg_op=_get_rule(_css_peg, "operation") )[_PARSED]
+			== [["and", 
+					["class", "foo"], 
+					["child", 
+						["class", "bar"], 
+						["class", "baz"]
+					]
+				]],
+		_match_parsed_peg( "not(foo)>bar", _css_peg, peg_op=_get_rule(_css_peg, "operation") )[_PARSED]
+			== [["child", 
+					["not", ["class", "foo"]], 
+					["class", "bar"]
+				]],
+		_match_parsed_peg( "bar:not(foo)", _css_peg, peg_op=_get_rule(_css_peg, "operation") )[_PARSED]
+			== [["and", 
+					["class", "bar"], 
+					["not", ["class", "foo"]]
+				]],
+	]
+);
 
-		_match_parsed_peg( "foo.bar,baz", _selector_grammar, peg_op=_get_rule(_selector_grammar, "operation") )[_PARSED],
 
+function _parse_css(css) = 
+	_match_parsed_peg(css, _css_peg)[_PARSED];
+
+echo("selector or", 
+	[
+		_parse_css( "foo,.bar.baz" )
+			== [["or", 
+					["class", "foo"], 
+					["and", ["class", "bar"], ["class", "baz"]]
+				]],
+		_parse_css( "foo.bar,.baz" )
+			== [["or", 
+					["and", ["class", "foo"], ["class", "bar"]], 
+					["class", "baz"]
+				]],
+		_parse_css( ".foo.bar,.baz.qux" )
+			== [["or", 
+					["and", ["class", "foo"], ["class", "bar"] ], 
+					["and", ["class", "baz"], ["class", "qux"] ]
+				]],
+		_parse_css( ".foo.bar.baz,.qux.norf" )
+			== [["or", 
+					["and", 
+						["class", "foo"], 
+						["and", ["class", "bar"], ["class", "baz"]]
+					],
+					["and", 
+						["class", "qux"], 
+						["class", "norf"]
+					]
+				]],
+		_parse_css( ".foo.bar,.baz.qux.norf" )
+			== [["or", 
+					["and", ["class", "foo"], ["class", "bar"]], 
+					["and", 
+						["class", "baz"], 
+						["and", ["class", "qux"], ["class", "norf"]]
+					]
+				]],
 	]
 );

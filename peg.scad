@@ -1,3 +1,5 @@
+include <strings.scad>
+
 _digit = "0123456789";
 _lowercase = "abcdefghijklmnopqrstuvwxyz";
 _uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -69,7 +71,7 @@ function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_cas
 			let( rest = _match_parsed_peg(string, peg, first[_POS], concat(opcode, _slice(operands, 1)), ignore_case = ignore_case) )
 			rest == undef?
 				undef
-			: _is_string(first[_PARSED][0]) && _is_string(rest[_PARSED][0])?
+			: is_string(first[_PARSED][0]) && is_string(rest[_PARSED][0])?
 				[[str(first[_PARSED][0], rest[_PARSED][0])], rest[_POS]]
 			: 
 				[concat(first[_PARSED], rest[_PARSED]), rest[_POS]]
@@ -103,11 +105,11 @@ function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_cas
 	: opcode == "many_to_many"?
 		let(min = operands[1][0],
 			max = operands[1][1])
-		let(min = _is_string(min)? parse_int(min) : min,
+		let(min = is_string(min)? parse_int(min) : min,
 			max = 
 				max == undef? 
 					undef 
-				: _is_string(max)? 
+				: is_string(max)? 
 					parse_int(max)
 				:
 					max
@@ -226,176 +228,6 @@ function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_cas
         ["ERROR: unrecognized opcode, '"+opcode+"'"]
 	;
 	
-
-function equals(this, that, ignore_case=false) = 
-	ignore_case?
-		lower(this) == lower(that)
-	:
-		this==that
-	;
-
-function _null_coalesce(string, replacement) = 
-	string == undef?
-		replacement
-	:
-		string
-	;
-
-function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
-	regex?
-		_match_parsed_rx(string,
-			_parse_rx(start), 
-			pos, 
-			ignore_case=ignore_case) != undef
-	:
-		equals(	substring(string, pos, len(start)), 
-			start, 
-			ignore_case=ignore_case)
-	;
-function substring(string, start, length=undef) = 
-	length == undef? 
-		between(string, start, len(string)) 
-	: 
-		between(string, start, length+start)
-	;
-
-//note: start is inclusive, end is exclusive
-function between(string, start, end) = 
-	string == undef?
-		undef
-	: start == undef?
-		undef
-	: start > len(string)?
-		undef
-	: start < 0?
-		before(string, end)
-	: end == undef?
-		undef
-	: end < 0?
-		undef
-	: end > len(string)?
-		after(string, start-1)
-	: start > end?
-		undef
-	: start == end ? 
-		"" 
-	: 
-        join([for (i=[start:end-1]) string[i]])
-	;
-
-function before(string, index=0) = 
-	string == undef?
-		undef
-	: index == undef?
-		undef
-	: index > len(string)?
-		string
-	: index <= 0?
-		""
-	: 
-        join([for (i=[0:index-1]) string[i]])
-	;
-
-function after(string, index=0) =
-	string == undef?
-		undef
-	: index == undef?
-		undef
-	: index < 0?
-		string
-	: index >= len(string)-1?
-		""
-	:
-        join([for (i=[index+1:len(string)-1]) string[i]])
-	;
-function join(strings, delimeter="") = 
-	strings == undef?
-		undef
-	: strings == []?
-		""
-	: _join(strings, len(strings)-1, delimeter, 0);
-function _join(strings, index, delimeter) = 
-	index==0 ? 
-		strings[index] 
-	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
-
-function is_in(string, list, ignore_case=false) = 
-	string == undef?
-		false
-    : 
-        any([ for (i = [0:len(list)-1]) equals(string, list[i], ignore_case=ignore_case) ])
-	;
-function any(booleans, index=0) = 
-    index > len(booleans)?
-        false
-    : booleans[index]?
-        true
-    :
-        any(booleans, index+1)
-    ;
-
-function parse_int(string, base=10, i=0, nb=0) = 
-	string[0] == "-" ? 
-		-1*_parse_int(string, base, 1) 
-	: 
-		_parse_int(string, base);
-
-function _parse_int(string, base, i=0, nb=0) = 
-	i == len(string) ? 
-		nb 
-	: 
-		nb + _parse_int(string, base, i+1, 
-				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
-
-
-function all(booleans, index=0) = 
-	index >= len(booleans)?
-		true
-	: !booleans[index]?
-		false
-	: 
-		all(booleans, index+1)
-	;
-
-
-
-
-
-
-
-function _is_in_range(char, min_char, max_char) = 
-	_ascii_code(char) >= _ascii_code(min_char) &&
-	_ascii_code(char) <= _ascii_code(max_char);
-	
-function _slice(array, start=0, end=-1) = 
-	array == undef?
-		undef
-	: start == undef?
-		undef
-	: start >= len(array)?
-		[]
-	: start < 0?
-		_slice(array, len(array)+start, end)
-	: end == undef?
-		undef
-	: end < 0?
-		_slice(array, start, len(array)+end)
-	: end >= len(array)?
-        undef
-    : start > end && start >= 0 && end >= 0?
-        _slice(array, end, start)
-	: 
-        [for (i=[start:end]) array[i]]
-	;
-function _is_string(x) = 
-	x == str(x);
-
-function _ascii_code(char) = 
-	len(char) != 1 || !_is_string(char)?
-		undef
-	:
-		search(char, _ascii, 0)[0][0]
-	;
 
 
 
