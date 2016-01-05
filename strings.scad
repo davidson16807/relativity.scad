@@ -1,11 +1,4 @@
-_digit = "0123456789";
-_lowercase = "abcdefghijklmnopqrstuvwxyz";
-_uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-_letter = str(_lowercase, _uppercase);
-_alphanumeric = str(_letter, _digit);
-_variable_safe = str(_alphanumeric, "_");
 _whitespace = " \t\r\n";
-_nonsymbol = str(_alphanumeric, _whitespace);
 
 _strings_version = 
 	[2014, 3, 17];
@@ -640,7 +633,8 @@ function _push(stack, char) =
 
 
 
-
+function is_string(x) = 
+	x == str(x);
 
 function is_empty(string) = 
 	string == "";
@@ -649,7 +643,7 @@ function is_null_or_empty(string) =
 	string == undef || string == "";
 	
 function is_null_or_whitespace(string) = 
-	string == undef || trim(string) == "";
+	string == undef || len([for (char=ascii_code(string)) if(char>0) char]) < 1;
 
 function trim(string) = 
 	string == undef?
@@ -842,8 +836,6 @@ function _slice(array, start=0, end=-1) =
 	: 
         [for (i=[start:end]) array[i]]
 	;
-function is_string(x) = 
-	x == str(x);
 
 
 
