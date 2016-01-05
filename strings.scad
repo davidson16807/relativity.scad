@@ -50,7 +50,7 @@ function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_cas
 
 	string == undef?
 		undef
-    : len(string) < string_pos?
+    : string_pos > len(string)?
         undef
 
     : peg != undef && peg_op == undef?
@@ -250,6 +250,16 @@ function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_cas
 			undef
 		:
 			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "start"?
+		string_pos == 0?
+			[[], string_pos]
+		: 
+			undef
+	: opcode == "end"?
+		string_pos == len(string)?
+			[[], string_pos]
+		:
+			undef
 	: opcode == "private"?
 		let( result = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case, string_code=string_code))
 		result == undef?
