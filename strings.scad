@@ -19,14 +19,21 @@ function strings_version_num() =
 
 
 
-_ascii = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-_hack = "\""; // used to work around syntax highlighter defficiencies in certain text editors
+_ASCII = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+_HACK = "\""; // used to work around syntax highlighter defficiencies in certain text editors
+_ASCII_SPACE 	= 32;
+_ASCII_0 		= 48;
+_ASCII_9 		= _ASCII_0 + 9;
+_ASCII_UPPER_A 	= 65;
+_ASCII_UPPER_Z 	= _ASCII_UPPER_A + 25;
+_ASCII_LOWER_A 	= 97;
+_ASCII_LOWER_Z 	= _ASCII_LOWER_A + 25;
 
 function ascii_code(string) = 
 	!is_string(string)?
 		undef
     :
-        [for (result = search(string, _ascii, 0)) 
+        [for (result = search(string, _ASCII, 0)) 
             result[0]
         ]
 	;
@@ -35,7 +42,7 @@ function ascii_code(string) =
 // PEG ENGINE
 _PARSED = 0;
 _POS = 1;
-function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  ignore_case=false ) =
+function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_case=false, string_code=undef ) =
 	let(
 		opcode = peg_op[0],
 		operands = _slice(peg_op, 1)
@@ -48,42 +55,45 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 
     : peg != undef && peg_op == undef?
     	_match_parsed_peg(	string, peg, string_pos, peg[1], 
-    						 ignore_case=ignore_case )
+    						 ignore_case=ignore_case, string_code=string_code )
+    						 
+    : string_code == undef?
+    	_match_parsed_peg( string, peg, string_pos, peg_op, ignore_case=ignore_case, string_code=ascii_code(string) )
     
     : opcode == "grammar"?
     	_match_parsed_peg(	string, peg_op, string_pos, peg_op[1],
-							 ignore_case=ignore_case )[_PARSED][0]
+							 ignore_case=ignore_case, string_code=string_code )[_PARSED][0]
 	: opcode == "rule"?
 		let(result = _match_parsed_peg(	string, peg, string_pos, operands[1],  
-										ignore_case=ignore_case ))
+										ignore_case=ignore_case, string_code=string_code ))
 		result != undef?
 			[[concat( [operands[0]], result[_PARSED] )], result[_POS]]
 		: 
 			undef
 	: opcode == "private_rule"?
 		let(result = _match_parsed_peg(	string, peg, string_pos, operands[1],  
-										ignore_case=ignore_case ))
+										ignore_case=ignore_case, string_code=string_code ))
 		result != undef?
 			result
 		: 
 			undef
 	: opcode == "ref"?
 		len(peg) > operands[0]?
-			_match_parsed_peg(string, peg, string_pos, peg[operands[0]], ignore_case=ignore_case )
+			_match_parsed_peg(string, peg, string_pos, peg[operands[0]], ignore_case=ignore_case, string_code=string_code )
 		:
 			["ERROR: unrecognized ref id, '"+operands[0]+"'"]
 
 	// BINARY
 	: opcode == "choice"?
-		let( option = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) )
+		let( option = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case, string_code=string_code ) )
 		option != undef?
 			option
 		: len(operands) < 2?
 			undef
 		: 
-			_match_parsed_peg(string, peg, string_pos, concat(opcode, _slice(operands, 1)), ignore_case=ignore_case )
+			_match_parsed_peg(string, peg, string_pos, concat(opcode, _slice(operands, 1)), ignore_case=ignore_case, string_code=string_code )
 	: opcode == "sequence"?
-		let( first = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) )
+		let( first = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case, string_code=string_code ) )
 		first == undef?
 			undef
 		: len(operands) == 1?
@@ -99,12 +109,12 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 
 	// PREFIX
 	: opcode == "positive_lookahead"?
-		_match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) != undef?
+		_match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case, string_code=string_code ) != undef?
 			[[], string_pos]
 		: 
 			undef
 	: opcode == "negative_lookahead"?
-		_match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) == undef?
+		_match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case, string_code=string_code ) == undef?
 			[[], string_pos]
 		: 
 			undef
@@ -113,7 +123,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 	: opcode == "one_to_many"?
 		_match_parsed_peg(string, peg, string_pos, 
 			["sequence", operands[0], ["zero_to_many", operands[0]]	], 
-			ignore_case=ignore_case 
+			ignore_case=ignore_case, string_code=string_code 
 			)
 	: opcode == "zero_to_many"?
 		_match_parsed_peg(string, peg, string_pos, 
@@ -121,7 +131,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 				["sequence", operands[0], ["zero_to_many", operands[0]] ], 
 				["empty_string"]
 			], 
-			ignore_case=ignore_case 
+			ignore_case=ignore_case, string_code=string_code 
 			)
 	: opcode == "many_to_many"?
 		let(min = operands[1][0],
@@ -145,7 +155,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 						],
 						[["zero_to_many", operands[0]]]
 					),
-				ignore_case=ignore_case
+				ignore_case=ignore_case, string_code=string_code
 				)	
 		: max < 0 || min > max?
 			undef
@@ -159,7 +169,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 							["zero_to_one", operands[0]]
 						]
 					),
-				ignore_case=ignore_case
+				ignore_case=ignore_case, string_code=string_code
 				)
 	: opcode == "zero_to_one"?
 		_match_parsed_peg(string, peg, string_pos, 
@@ -167,7 +177,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 				operands[0],
 				["empty_string"]
 			], 
-			ignore_case=ignore_case 
+			ignore_case=ignore_case, string_code=string_code 
 			)
 			
 			
@@ -186,7 +196,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 				arg == str(arg)?
 					equals(string[string_pos], arg, ignore_case=ignore_case)
 				:
-					_match_parsed_peg(string, peg, string_pos, arg, ignore_case=ignore_case ) != undef
+					_match_parsed_peg(string, peg, string_pos, arg, ignore_case=ignore_case, string_code=string_code ) != undef
 			])
 		
 		!any(matches)?
@@ -199,7 +209,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 				arg == str(arg)?
 					equals(string[string_pos], arg, ignore_case=ignore_case)
 				:
-					_match_parsed_peg(string, peg, string_pos, arg, ignore_case=ignore_case ) != undef
+					_match_parsed_peg(string, peg, string_pos, arg, ignore_case=ignore_case, string_code=string_code ) != undef
 			])
 		
 		any(matches)?
@@ -207,7 +217,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 		:
 			[ [string[string_pos]], string_pos+1 ]
 	: opcode == "character_range"?
-		!_is_in_range(string[string_pos], operands[0][0], operands[0][1])?
+		!_is_in_range(string_code[string_pos], ascii_code(operands[0][0])[0], ascii_code(operands[0][1])[0])?
 			undef
 		:
 			[ [string[string_pos]], string_pos+1 ]
@@ -217,19 +227,19 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 		:
 			[ [string[string_pos]], string_pos+1 ]
 	: opcode == "character_set_shorthand"?
-		operands[0] == "s" && !is_in(string[string_pos], _whitespace)? //whitespace
+		operands[0] == "s" && !_is_in_range(string_code[string_pos], 0, _ASCII_SPACE)? //whitespace
 			undef
-		: operands[0] == "S" && is_in(string[string_pos], _whitespace)? //nonwhitespace
+		: operands[0] == "S" && _is_in_range(string_code[string_pos], 0, _ASCII_SPACE)? //nonwhitespace
 			undef
-					
-		: operands[0] == "d" && !is_in(string[string_pos], _digit)? //digit
+		
+		: operands[0] == "d" && !_is_in_range(string_code[string_pos], _ASCII_0, _ASCII_9)? //digit
 			undef
-		: operands[0] == "D" && is_in(string[string_pos], _digit)? //nondigit
+		: operands[0] == "D" && _is_in_range(string_code[string_pos], _ASCII_0, _ASCII_9)? //nondigit
 			undef
-					
-		: operands[0] == "w" && !is_in(string[string_pos], _variable_safe)? // word character
+		
+		: operands[0] == "w" && !_is_variable_safe(string_code[string_pos])? // word character
 			undef
-		: operands[0] == "W" && is_in(string[string_pos], _variable_safe)? //non word character
+		: operands[0] == "W" && _is_variable_safe(string_code[string_pos])? //non word character
 			undef
 		: !is_in(operands[0], "sSdDwW") && !equals(string[string_pos], operands[0], ignore_case=ignore_case)? // literal
 			undef
@@ -241,7 +251,7 @@ function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  igno
 		:
 			[ [string[string_pos]], string_pos+1 ]
 	: opcode == "private"?
-		let( result = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case))
+		let( result = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case, string_code=string_code))
 		result == undef?
 			undef
 		: 
@@ -665,9 +675,15 @@ function _match_set_reverse(string, set, pos) =
 
 	
 
-function _is_in_range(char, min_char, max_char) = 
-	ascii_code(char)[0] >= ascii_code(min_char)[0] &&
-	ascii_code(char)[0] <= ascii_code(max_char)[0];
+function _is_in_range(code, min_char, max_char) = 
+	code >= min_char &&
+	code <= max_char;
+
+function _is_variable_safe(code) = 
+	_is_in_range(code, _ASCII_0, _ASCII_9) ||
+	_is_in_range(code, _ASCII_UPPER_A, _ASCII_UPPER_Z) ||
+	_is_in_range(code, _ASCII_LOWER_A, _ASCII_LOWER_Z) ||
+	chr(code) == "_";
 
 function equals(this, that, ignore_case=false) = 
 	ignore_case?
