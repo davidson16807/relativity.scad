@@ -23,10 +23,12 @@ _ascii = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@A
 _hack = "\""; // used to work around syntax highlighter defficiencies in certain text editors
 
 function ascii_code(char) = 
-	len(char) != 1 || !is_string(char)?
+	char != str(char)?
 		undef
-	:
-		search(char, _ascii, 0)[0][0]
+    :
+        [for (result = search(char, _ascii, 0)) 
+            result[0]
+        ]
 	;
 
 
@@ -674,8 +676,8 @@ function _match_quote(string, quote_char, pos) =
 	
 
 function _is_in_range(char, min_char, max_char) = 
-	ascii_code(char) >= ascii_code(min_char) &&
-	ascii_code(char) <= ascii_code(max_char);
+	ascii_code(char)[0] >= ascii_code(min_char)[0] &&
+	ascii_code(char)[0] <= ascii_code(max_char)[0];
 
 function equals(this, that, ignore_case=false) = 
 	ignore_case?
@@ -687,20 +689,16 @@ function equals(this, that, ignore_case=false) =
 
 
 function upper(string) = 
-	join([for (i = [0:len(string)-1])        
-            let(char = string[i])
-            let(code = ascii_code(char))
-            code >= 97 && code <= 122?
-                chr(ascii_code(char)-97+65)
+	join([for (code = ascii_code(string))
+			code >= 97 && code <= 122?
+                chr(code-97+65)
             :
-                char
+                chr(code)
 		]);
 function lower(string) = 
-	join([for (i = [0:len(string)-1])        
-            let(char = string[i])
-            let(code = ascii_code(char))
-            code >= 65 && code <= 90?
-                chr(ascii_code(char)+97-65)
+	join([for (code = ascii_code(string))
+			code >= 65 && code <= 90?
+                chr(code+97-65)
             :
                 char
 		]);
@@ -884,5 +882,4 @@ function _unit_test(name, tests) =
 	:
 		str(name, ":\tpassed")
     ;
-
 
