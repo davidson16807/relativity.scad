@@ -22,11 +22,11 @@ function strings_version_num() =
 _ascii = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 _hack = "\""; // used to work around syntax highlighter defficiencies in certain text editors
 
-function ascii_code(char) = 
-	char != str(char)?
+function ascii_code(string) = 
+	!is_string(string)?
 		undef
     :
-        [for (result = search(char, _ascii, 0)) 
+        [for (result = search(string, _ascii, 0)) 
             result[0]
         ]
 	;
@@ -35,7 +35,7 @@ function ascii_code(char) =
 // PEG ENGINE
 _PARSED = 0;
 _POS = 1;
-function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_case=false ) =
+function _match_parsed_peg( string, peg=undef, string_pos=0, peg_op=undef,  ignore_case=false ) =
 	let(
 		opcode = peg_op[0],
 		operands = _slice(peg_op, 1)
@@ -231,7 +231,7 @@ function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_cas
 			undef
 		: operands[0] == "W" && is_in(string[string_pos], _variable_safe)? //non word character
 			undef
-		: !is_in(operands[0], "sSdDwW") && string[string_pos] != operands[0]? // literal
+		: !is_in(operands[0], "sSdDwW") && !equals(string[string_pos], operands[0], ignore_case=ignore_case)? // literal
 			undef
 		:
 			[ [string[string_pos]], string_pos+1 ]
@@ -662,16 +662,6 @@ function _match_set_reverse(string, set, pos) =
 		pos
 	;
 
-function _match_quote(string, quote_char, pos) = 
-	pos >= len(string)?
-		len(string)
-	: string[pos] == quote_char?
-		pos
-	: string[pos] == "\\"? 
-		_match_quote(string, quote_char, pos+2)
-	: 
-		_match_quote(string, quote_char, pos+1)
-	;
 
 	
 
@@ -689,18 +679,20 @@ function equals(this, that, ignore_case=false) =
 
 
 function upper(string) = 
-	join([for (code = ascii_code(string))
-			code >= 97 && code <= 122?
-                chr(code-97+65)
+	let(code = ascii_code(string))
+	join([for (i = [0:len(string)-1])
+			code[i] >= 97 && code[i] <= 122?
+                chr(code[i]-97+65)
             :
-                chr(code)
+                string[i]
 		]);
 function lower(string) = 
-	join([for (code = ascii_code(string))
-			code >= 65 && code <= 90?
-                chr(code+97-65)
+	let(code = ascii_code(string))
+	join([for (i = [0:len(string)-1])
+			code[i] >= 65 && code[i] <= 90?
+                chr(code[i]+97-65)
             :
-                char
+                string[i]
 		]);
 
 function reverse(string) = 
