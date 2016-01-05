@@ -1,5 +1,3 @@
-_whitespace = " \t\r\n";
-
 _strings_version = 
 	[2014, 3, 17];
 function strings_version() =
@@ -12,8 +10,6 @@ function strings_version_num() =
 
 
 
-_ASCII = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-_HACK = "\""; // used to work around syntax highlighter defficiencies in certain text editors
 _ASCII_SPACE 	= 32;
 _ASCII_0 		= 48;
 _ASCII_9 		= _ASCII_0 + 9;
@@ -21,13 +17,20 @@ _ASCII_UPPER_A 	= 65;
 _ASCII_UPPER_Z 	= _ASCII_UPPER_A + 25;
 _ASCII_LOWER_A 	= 97;
 _ASCII_LOWER_Z 	= _ASCII_LOWER_A + 25;
+_ASCII = "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+_ASCII_HACK = "\""; // only here to work around syntax highlighter defficiencies in certain text editors
+_WHITESPACE = " \t\r\n";
+_ASCII_CODE = concat(9,10,13, [for(i=[_ASCII_SPACE : _ASCII_LOWER_Z+4]) i]);
 
 function ascii_code(string) = 
 	!is_string(string)?
 		undef
     :
         [for (result = search(string, _ASCII, 0)) 
-            result[0]
+            result == undef?
+                undef
+            :
+                _ASCII_CODE[result[0]]
         ]
 	;
 
@@ -652,8 +655,8 @@ function trim(string) =
 		""
 	:
 		_null_coalesce(
-			between(string, _match_set(string, _whitespace, 0), 
-					_match_set_reverse(string, _whitespace, len(string))),
+			between(string, _match_set(string, _WHITESPACE, 0), 
+					_match_set_reverse(string, _WHITESPACE, len(string))),
 			""
 		)
 	;
