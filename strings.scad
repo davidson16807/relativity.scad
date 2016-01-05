@@ -1,4 +1,3 @@
-
 _digit = "0123456789";
 _lowercase = "abcdefghijklmnopqrstuvwxyz";
 _uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -7,10 +6,6 @@ _alphanumeric = str(_letter, _digit);
 _variable_safe = str(_alphanumeric, "_");
 _whitespace = " \t\r\n";
 _nonsymbol = str(_alphanumeric, _whitespace);
-_ascii = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-_hack = "\""; // used to work around syntax highlighter defficiencies in certain text editors
-
-_regex_ops = "?*+&|";
 
 _strings_version = 
 	[2014, 3, 17];
@@ -19,6 +14,453 @@ function strings_version() =
 function strings_version_num() =
 	_strings_version.x * 10000 + _strings_version.y * 100 + _strings_version.z;
 
+
+
+
+
+
+_ascii = "         \t\n  \r                   !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+_hack = "\""; // used to work around syntax highlighter defficiencies in certain text editors
+
+function ascii_code(char) = 
+	len(char) != 1 || !is_string(char)?
+		undef
+	:
+		search(char, _ascii, 0)[0][0]
+	;
+
+
+// PEG ENGINE
+_PARSED = 0;
+_POS = 1;
+function _match_parsed_peg( string, peg, string_pos=0, peg_op=undef,  ignore_case=false ) =
+	let(
+		opcode = peg_op[0],
+		operands = _slice(peg_op, 1)
+	)
+
+	string == undef?
+		undef
+    : len(string) < string_pos?
+        undef
+
+    : peg != undef && peg_op == undef?
+    	_match_parsed_peg(	string, peg, string_pos, peg[1], 
+    						 ignore_case=ignore_case )
+    
+    : opcode == "grammar"?
+    	_match_parsed_peg(	string, peg_op, string_pos, peg_op[1],
+							 ignore_case=ignore_case )[_PARSED][0]
+	: opcode == "rule"?
+		let(result = _match_parsed_peg(	string, peg, string_pos, operands[1],  
+										ignore_case=ignore_case ))
+		result != undef?
+			[[concat( [operands[0]], result[_PARSED] )], result[_POS]]
+		: 
+			undef
+	: opcode == "private_rule"?
+		let(result = _match_parsed_peg(	string, peg, string_pos, operands[1],  
+										ignore_case=ignore_case ))
+		result != undef?
+			result
+		: 
+			undef
+	: opcode == "ref"?
+		len(peg) > operands[0]?
+			_match_parsed_peg(string, peg, string_pos, peg[operands[0]], ignore_case=ignore_case )
+		:
+			["ERROR: unrecognized ref id, '"+operands[0]+"'"]
+
+	// BINARY
+	: opcode == "choice"?
+		let( option = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) )
+		option != undef?
+			option
+		: len(operands) < 2?
+			undef
+		: 
+			_match_parsed_peg(string, peg, string_pos, concat(opcode, _slice(operands, 1)), ignore_case=ignore_case )
+	: opcode == "sequence"?
+		let( first = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) )
+		first == undef?
+			undef
+		: len(operands) == 1?
+			first
+		: 
+			let( rest = _match_parsed_peg(string, peg, first[_POS], concat(opcode, _slice(operands, 1)), ignore_case = ignore_case) )
+			rest == undef?
+				undef
+			: is_string(first[_PARSED][0]) && is_string(rest[_PARSED][0])?
+				[[str(first[_PARSED][0], rest[_PARSED][0])], rest[_POS]]
+			: 
+				[concat(first[_PARSED], rest[_PARSED]), rest[_POS]]
+
+	// PREFIX
+	: opcode == "positive_lookahead"?
+		_match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) != undef?
+			[[], string_pos]
+		: 
+			undef
+	: opcode == "negative_lookahead"?
+		_match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case ) == undef?
+			[[], string_pos]
+		: 
+			undef
+
+	// POSTFIX
+	: opcode == "one_to_many"?
+		_match_parsed_peg(string, peg, string_pos, 
+			["sequence", operands[0], ["zero_to_many", operands[0]]	], 
+			ignore_case=ignore_case 
+			)
+	: opcode == "zero_to_many"?
+		_match_parsed_peg(string, peg, string_pos, 
+			["choice", 
+				["sequence", operands[0], ["zero_to_many", operands[0]] ], 
+				["empty_string"]
+			], 
+			ignore_case=ignore_case 
+			)
+	: opcode == "many_to_many"?
+		let(min = operands[1][0],
+			max = operands[1][1])
+		let(min = is_string(min)? parse_int(min) : min,
+			max = 
+				max == undef? 
+					undef 
+				: is_string(max)? 
+					parse_int(max)
+				:
+					max
+			)
+		min == undef?
+			undef
+		: max == undef?
+			_match_parsed_peg(string, peg, string_pos,
+				concat(["sequence"], 
+						[for (i = [0:min-1])
+							operands[0]
+						],
+						[["zero_to_many", operands[0]]]
+					),
+				ignore_case=ignore_case
+				)	
+		: max < 0 || min > max?
+			undef
+		:
+			_match_parsed_peg(string, peg, string_pos,
+				concat(["sequence"], 
+						[for (i = [0:min-1])
+							operands[0]
+						],
+						[for (i = [min:max-1])
+							["zero_to_one", operands[0]]
+						]
+					),
+				ignore_case=ignore_case
+				)
+	: opcode == "zero_to_one"?
+		_match_parsed_peg(string, peg, string_pos, 
+			["choice",
+				operands[0],
+				["empty_string"]
+			], 
+			ignore_case=ignore_case 
+			)
+			
+			
+	// PRIMITIVES
+	: opcode == "literal"?
+		!starts_with(string, operands[0], string_pos, ignore_case=ignore_case) ?
+			undef
+		:
+			[ 
+				[between(string, string_pos, string_pos+len(operands[0]))], 
+				string_pos+len(operands[0]) 
+			]
+	: opcode == "positive_character_set"?
+		let(matches		= 
+			[ for (arg = operands)
+				arg == str(arg)?
+					equals(string[string_pos], arg, ignore_case=ignore_case)
+				:
+					_match_parsed_peg(string, peg, string_pos, arg, ignore_case=ignore_case ) != undef
+			])
+		
+		!any(matches)?
+			undef
+		:
+			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "negative_character_set"?
+		let(matches	= 
+			[ for (arg = operands)
+				arg == str(arg)?
+					equals(string[string_pos], arg, ignore_case=ignore_case)
+				:
+					_match_parsed_peg(string, peg, string_pos, arg, ignore_case=ignore_case ) != undef
+			])
+		
+		any(matches)?
+			undef
+		:
+			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "character_range"?
+		!_is_in_range(string[string_pos], operands[0][0], operands[0][1])?
+			undef
+		:
+			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "character_literal"?
+		!equals(string[string_pos], operands[0], ignore_case=ignore_case)?
+			undef
+		:
+			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "character_set_shorthand"?
+		operands[0] == "s" && !is_in(string[string_pos], _whitespace)? //whitespace
+			undef
+		: operands[0] == "S" && is_in(string[string_pos], _whitespace)? //nonwhitespace
+			undef
+					
+		: operands[0] == "d" && !is_in(string[string_pos], _digit)? //digit
+			undef
+		: operands[0] == "D" && is_in(string[string_pos], _digit)? //nondigit
+			undef
+					
+		: operands[0] == "w" && !is_in(string[string_pos], _variable_safe)? // word character
+			undef
+		: operands[0] == "W" && is_in(string[string_pos], _variable_safe)? //non word character
+			undef
+		: !is_in(operands[0], "sSdDwW") && string[string_pos] != operands[0]? // literal
+			undef
+		:
+			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "wildcard"?
+		string[string_pos] == undef?
+			undef
+		:
+			[ [string[string_pos]], string_pos+1 ]
+	: opcode == "private"?
+		let( result = _match_parsed_peg(string, peg, string_pos, operands[0], ignore_case=ignore_case))
+		result == undef?
+			undef
+		: 
+			[[], result[_POS]]
+	: opcode == "empty_string"?
+		[[], string_pos]
+    : 
+        ["ERROR: unrecognized opcode, '"+opcode+"'"]
+	;
+	
+// PEG SYMBOL LINKER
+function _get_rule_indexer(peg) = 
+	[for (rule = _slice(peg, 1))
+		rule[1]
+	];
+function _get_rule_index(rule, indexer) = 
+	[for (i = [0:len(indexer)-1]) if(indexer[i] == rule) i+1 ] [0];
+function _index_peg_op_refs(peg_op, indexer) = 
+	let(
+			opcode = peg_op[0],
+			operands = _slice(peg_op, 1)
+		)
+	peg_op == str(peg_op)?
+		peg_op
+	: opcode == "ref"?
+		["ref", _get_rule_index(operands[0], indexer)]
+	:
+		concat(opcode, [for (operand = operands) _index_peg_op_refs(operand, indexer)])
+    ;
+function _index_peg_refs(peg) = 
+	_index_peg_op_refs(peg, _get_rule_indexer(peg));
+function _get_rule(peg, ref) = 
+	[for (rule = peg) if(rule[1] == ref) rule ] [0];
+
+_rx_peg = 
+_index_peg_refs
+(
+	["grammar",
+		["private_rule", "operation",
+			["sequence",
+				["choice",
+					["ref", "choice"],
+					["ref", "sequence"],
+					["ref", "postfix"],
+				],
+				// ["negative_lookahead", ["wildcard"]],
+			]
+		],
+		["private_rule", "postfix",
+			["choice",
+				["ref", "many_to_many"],
+				["ref", "one_to_many"],
+				["ref", "zero_to_many"],
+				["ref", "zero_to_one"],
+				["ref", "primitive"]
+			],
+		],
+
+		//BINARY OPERATIONS
+		["rule", "choice",
+			["sequence",
+				["choice", 
+					["ref", "sequence"],
+					["ref", "postfix"]
+				],
+				["one_to_many",
+					["sequence",
+						["private", ["literal", "|"]],
+						["choice", 
+							["ref", "sequence"],
+							["ref", "postfix"]
+						],
+					]
+				]
+			]
+		],
+		["rule", "sequence",
+			["sequence",
+				["ref", "postfix"],
+				["one_to_many",
+					["ref", "postfix"],
+				 ]
+			]
+		],
+
+		["rule", "positive_lookahead",
+			["sequence",
+				["private", ["literal", "(?="]],
+				["ref", "operation"],
+				["private", ["literal", ")"]],
+			]
+		],
+		["rule", "negative_lookahead",
+			["sequence",
+				["private", ["literal", "(?!"]],
+				["ref", "operation"],
+				["private", ["literal", ")"]],
+			]
+		],
+
+		//UNARY POSTFIX OPERATIONS
+		["rule", "one_to_many",
+			["sequence",
+				["ref", "primitive"],
+				["private", ["literal", "+"]]
+			]
+		],
+		["rule", "zero_to_many",
+			["sequence",
+				["ref", "primitive"],
+				["private", ["literal", "*"]]
+			]
+		],
+		["rule", "zero_to_one",
+			["sequence",
+				["ref", "primitive"],
+				["private", ["literal", "?"]]
+			]
+		],
+		["rule", "many_to_many",
+			["sequence",
+				["ref", "primitive"],
+				["private", ["literal", "{"]],
+				["character_set_shorthand", "d"],
+				["zero_to_one",
+					["sequence",
+						["private", ["literal", ","]],
+						["character_set_shorthand", "d"],
+					],
+				],
+				["private", ["literal", "}"]],
+			]
+		],
+
+		//PRIMITIVES
+		["private_rule", "primitive",
+			["choice",
+				["ref", "wildcard"],
+				["ref", "character_set_shorthand"],
+				["ref", "negative_character_set"],
+				["ref", "positive_character_set"],
+				["ref", "negative_lookahead"],
+				["ref", "positive_lookahead"],
+				["sequence",
+					["private", ["literal", "("]],
+					["ref", "operation"],
+					["private", ["literal", ")"]],
+				],
+				["ref", "literal"],
+			],
+		],
+
+		["rule", "wildcard",
+			["private", ["literal", "."]],
+		],
+		["rule", "literal", 
+			["negative_character_set", 
+				"{","}","[","]","(",")", 
+				"|","*","+","?",".","\\","."
+			],
+		],
+		["rule", "positive_character_set",
+			["sequence",
+				["private", ["literal", "["]],
+				["one_to_many",
+					["choice",
+						["ref", "character_range"],
+						["ref", "character_set_shorthand"],
+						["ref", "character_literal"]
+					]
+				],
+				["private", ["literal", "]"]],
+			]
+		],
+		["rule", "negative_character_set",
+			["sequence",
+				["private", ["literal", "[^"]],
+				["one_to_many",
+					["choice",
+						["ref", "character_range"],
+						["ref", "character_set_shorthand"],
+						["ref", "character_literal"]
+					]
+				],
+				["private", ["literal", "]"]],
+			]
+		],
+		["rule", "character_literal",
+			["negative_character_set", "]"]
+		],
+		["rule", "character_range",
+			["sequence",
+				["character_set_shorthand", "w"],
+				["private", ["literal", "-"]],
+				["character_set_shorthand", "w"],
+			],
+		],
+		["rule", "character_set_shorthand",
+			["sequence", 
+				["private", ["literal", "\\"]],
+				["positive_character_set",
+					"s","S","d","D","w","W", "\\", "]", "(", ")"
+				]
+			]
+		],
+	]
+);
+function _parse_rx(rx) = 
+	_match_parsed_peg(rx, _rx_peg)[_PARSED][0];
+
+function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) = 
+	_match_parsed_peg(string, 
+		undef, 
+		string_pos=string_pos, 
+		peg_op=regex, 
+		ignore_case=ignore_case)[_POS];
+function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
+	_match_parsed_rx(string,
+		regex=_parse_rx(pattern),
+		string_pos=pos,
+		ignore_case=ignore_case);
 
 
 
@@ -117,7 +559,7 @@ function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false)
     ;
 function _match(string, pattern, pos, regex=false, ignore_case=false) = 
     regex?
-        _match_parsed_rx(string, pattern, pos, ignore_case=ignore_case)
+    	_match_parsed_peg(string, undef, pos, peg_op=pattern, ignore_case=ignore_case)[_POS]
     : starts_with(string, pattern, pos, ignore_case=ignore_case)? 
         pos+len(pattern) 
     : 
@@ -127,9 +569,10 @@ function _match(string, pattern, pos, regex=false, ignore_case=false) =
     
 function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
 	regex?
-		_match_parsed_rx(string,
-			_parse_rx(start), 
+		_match_parsed_peg(string,
+			undef,
 			pos, 
+			_parse_rx(start), 
 			ignore_case=ignore_case) != undef
 	:
 		equals(	substring(string, pos, len(start)), 
@@ -146,116 +589,6 @@ function ends_with(string, end, ignore_case=false) =
 
 
 
-
-
-function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
-	_match_parsed_rx(string,
-		_parse_rx(pattern), 
-		pos, 
-		ignore_case=ignore_case);
-	
-//converts an infix notated regex string to a parse tree using the shunting yard algorithm
-function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) = 
-	rx == undef?
-		undef
-	: i >= len(rx)?
-		len(ops) <= 0?
-			args[0]
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-			
-			
-	: ops[0] == "{"?
-		rx[i] == "}"?
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		 i+1)
-		: rx[i] == ","?
-			_parse_rx(rx, ops, 		_swap(args, _push(args[0], "")), 	 i+1)
-		: 
-			_parse_rx(rx, ops, 		_swap(args, _swap(args[0], str(args[0][0], rx[i]))), i+1)
-			
-			
-	: ops[0] == "[" || ops[0] == "[^"?
-		rx[i] == "]"?
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i+1)
-		: rx[i] == "\\"?
-			_parse_rx(rx, ops, 		_swap(args, _push(args[0],rx[i+1])), 	i+2)
-		: rx[i] == "-"?
-			_parse_rx(rx, ops, 		_swap(args, _push(_pop(args[0]), ["-", args[0][0], rx[i+1]])), i+2)
-		:
-			_parse_rx(rx, ops, 		_swap(args, _push(args[0], rx[i])), 	i+1)
-	: rx[i] == "[" && rx[i+1] == "^"?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, _push(ops, "[^"),	_push(args, []),	 		i+2)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops,"&"),"[^"), _push(args, []), i+2)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == "["?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, _push(ops, "["), 	_push(args, []),	 		i+1)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops,"&"),"["), _push(args, []), i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-			
-	: rx[i] == "{"?
-			_parse_rx(rx, _push(ops, "{"),	_push(args, ["", []]), 			i+1)
-			
-			
-	: is_in(rx[i], _regex_ops)?
-		_can_shunt(ops, rx[i])?
-			_parse_rx(rx, _push(ops, rx[i]), args, 		 		i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == ")"?
-		ops[0] == "(" ?
-			_parse_rx(rx, _pop(ops), 	args,			 		i+1)
-		: len(ops) <= 0 ?
-			_parse_rx(rx, ops, 		args,			 		i+1)
-		: 
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == "("?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, _push(ops, "("), 	args, 		 			i+1)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(_push(ops, "&"), "("), args, 	 		i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	: rx[i] == "\\"?
-		!_can_concat(rx, i)?
-			_parse_rx(rx, ops, 			_push(args,str(rx[i],rx[i+1])),	i+2)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(ops, "&"),	_push(args,str(rx[i],rx[i+1])),	i+2)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	:
-		!_can_concat(rx, i)?
-			_parse_rx(rx, ops, 		_push(args, rx[i]),	 		i+1)
-		: _can_shunt(ops, "&")?
-			_parse_rx(rx, _push(ops, "&"),	_push(args, rx[i]),	 		i+1)
-		:
-			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-	;
-
-	
-function _can_concat(regex, i) = 
-	regex[i-1] != undef &&
-	(!is_in(regex[i-1], "|(") || regex[i-2] == "\\");
-	
-function _can_shunt(stack, op) = 
-	stack[0] == "(" || 
-	len(stack) <= 0 || 
-	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
-	
-function _push_rx_op(stack, op) = 
-	is_in(op[0], "[?*+")? // is unary?
-		_push(_pop(stack), 	[op, stack[0]])
-	: 		 	// is binary?
-		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
-	;
-
-function _swap(stack, replacement) = 
-	_push(_pop(stack), replacement);
 function _pop(stack, n=1) = 
 	n <= 1?
 		len(stack) <=0? [] : stack[1]
@@ -265,140 +598,26 @@ function _pop(stack, n=1) =
 function _push(stack, char) = 
 	[char, stack];
 
-function _precedence(op, ops) = 
-	search(op, ops)[0];
-	
-function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) = 
-	//INVALID INPUT
-	string == undef?
-		undef
-	
-	//string length and anchors
-	: regex == "^"?
-		string_pos == 0?
-			string_pos
-		:
-			undef
-	: regex == "$"?
-		string_pos >= len(string)?
-			string_pos
-		:
-			undef
-	: string_pos == undef?
-		undef
-	: string_pos >= len(string)?
-		undef
-		
-	//ALTERNATION
-	: regex[0] == "|" ?
-		_null_coalesce(
-			_match_parsed_rx(string, regex[1], string_pos, ignore_case=ignore_case),
-			_match_parsed_rx(string, regex[2], string_pos, ignore_case=ignore_case)
-		)
 
-	//KLEENE STAR
-	: regex[0] == "*" ?
-		_match_repetition(string, regex[1],
-			0, undef,
-			string_pos,
-			ignore_case=ignore_case)
 
-	//KLEENE BRACKETS
-	: regex[0] == "{" ?
-		regex[2][1][0] == undef?
-			_match_repetition(string, regex[1],
-				_parse_int(regex[2][0], 10), undef,
-				string_pos,
-				ignore_case=ignore_case)
-		:
-			_match_repetition(string, regex[1],
-				_parse_int(regex[2][1][0], 10), _parse_int(regex[2][0], 10),
-				string_pos,
-				ignore_case=ignore_case)
-		
-	//KLEENE PLUS
-	: regex[0] == "+" ?
-		_match_repetition(string, regex[1],
-			1, undef,
-			string_pos,
-			ignore_case=ignore_case)
 
-	//OPTION
-	: regex[0] == "?" ?
-		_match_repetition(string, regex[1],
-			0, 1,
-			string_pos,
-			ignore_case=ignore_case)
 
-	//CONCATENATION
-	: regex[0] == "&" ?	
-		_match_parsed_rx(string, regex[2], 
-			_match_parsed_rx(string, regex[1], string_pos, ignore_case=ignore_case), 
-			ignore_case=ignore_case)
-			
-	//ESCAPE CHARACTER
-	: regex == "\\d"?
-		is_in(string[string_pos], _digit)?
-			string_pos+1
-		: 
-			undef
-	: regex == "\\s"?
-		is_in(string[string_pos], _whitespace)?
-			string_pos+1
-		: 
-			undef
-	: regex == "\\w"?
-		is_in(string[string_pos], _alphanumeric)?
-			string_pos+1
-		: 
-			undef
-	: regex == "\\D"?
-		!is_in(string[string_pos], _digit)?
-			string_pos+1
-		: 
-			undef
-				
-	: regex == "\\S"?
-		!is_in(string[string_pos], _whitespace)?
-			string_pos+1
-		: 
-			undef
-	: regex == "\\W"?
-		!is_in(string[string_pos], _alphanumeric)?
-			string_pos+1
-		: 
-			undef
-	: regex[0] == "\\"?
-		string[string_pos] == regex[0][1]?
-			string_pos+1
-		:
-			undef
-	
-	//CHARACTER SET
-	: regex[0] == "[" ?
-		_is_in_stack(string[string_pos], regex[1], ignore_case=ignore_case)?
-			string_pos+1
-		:
-			undef
-	//NEGATIVE CHARACTER SET
-	: regex[0] == "[^" ?
-		!_is_in_stack(string[string_pos], regex[1], ignore_case=ignore_case)?
-			string_pos+1
-		:
-			undef
-		
-	//LITERAL
-	: equals(string[string_pos], regex, ignore_case=ignore_case) ?
-		string_pos+1
-	
-	//WILDCARD
-	: regex == "."?
-		string_pos+1
-	
-	//NO MATCH
-	: 
-		undef
-	;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function is_empty(string) = 
@@ -423,21 +642,6 @@ function trim(string) =
 		)
 	;
 
-function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) = 
-    pos == undef?
-        undef
-    : pos > len(string)?
-        undef
-	: _null_coalesce(
-		_match_repetition(string, regex, min_reps-1, max_reps-1, 
-			_match_parsed_rx(string, regex, pos, ignore_case=ignore_case), 
-            ignore_case=ignore_case),
-		(min_reps== undef || min_reps <= 0) && (max_reps == undef || max_reps >= 0)?
-			pos
-		: 
-			undef
-	);
-	
 function _match_set(string, set, pos) = 
 	pos >= len(string)?
 		len(string)
@@ -472,20 +676,6 @@ function _match_quote(string, quote_char, pos) =
 function _is_in_range(char, min_char, max_char) = 
 	ascii_code(char) >= ascii_code(min_char) &&
 	ascii_code(char) <= ascii_code(max_char);
-function _is_in_stack(string, stack, ignore_case=false) = 
-	stack == undef?
-		false
-	: len(stack) <= 0?
-		false
-	: stack[0][0] == "-"?
-		_is_in_range(string, stack[0][1], stack[0][2])
-	: string == stack[0]?
-		true
-	: ignore_case && lower(string) == lower(stack[0])?
-		true
-	:
-		_is_in_stack(string, _pop(stack), ignore_case=ignore_case)
-	;
 
 function equals(this, that, ignore_case=false) = 
 	ignore_case?
@@ -494,22 +684,26 @@ function equals(this, that, ignore_case=false) =
 		this==that
 	;
 
-function lower(string) = 
-	_transform_case(string, search(string, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0), 97);
+
 
 function upper(string) = 
-	_transform_case(string, search(string, "abcdefghijklmnopqrstuvwxyz",0), 65);
-
-//TODO: convert to list comprehensions
-function _transform_case(string, encodings, offset) = 
-    join([for (i = [0:len(encodings)-1])
-            len(encodings[i]) > 0?
-                chr(encodings[i][0] + offset)
+	join([for (i = [0:len(string)-1])        
+            let(char = string[i])
+            let(code = ascii_code(char))
+            code >= 97 && code <= 122?
+                chr(ascii_code(char)-97+65)
             :
-                string[i]
-    ])
-	;
-
+                char
+		]);
+function lower(string) = 
+	join([for (i = [0:len(string)-1])        
+            let(char = string[i])
+            let(code = ascii_code(char))
+            code >= 65 && code <= 90?
+                chr(ascii_code(char)+97-65)
+            :
+                char
+		]);
 
 function reverse(string) = 
 	string == undef?
@@ -635,12 +829,6 @@ function _slice(array, start=0, end=-1) =
 function is_string(x) = 
 	x == str(x);
 
-function ascii_code(char) = 
-	len(char) != 1 || !is_string(char)?
-		undef
-	:
-		search(char, _ascii, 0)[0][0]
-	;
 
 
 
@@ -675,3 +863,26 @@ function _coalesce_on(value, error, fallback) =
 		value
 	;
 	
+
+
+
+function _unit_test(name, tests) = 
+	let(results = 
+		[for(i=[0:len(tests)/2]) 
+			let(test = tests[i*2], 
+				result=tests[i*2+1])
+			test==result
+		])
+	!all(results)?
+		concat([name],
+			[for(i=[0:len(tests)/2]) 
+				let(test = tests[i*2], 
+					result=tests[i*2+1])
+				[test, result]
+			]
+		)
+	:
+		str(name, ":\tpassed")
+    ;
+
+
