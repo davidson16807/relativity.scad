@@ -395,6 +395,8 @@ _index_peg_refs
 		//PRIMITIVES
 		["private_rule", "primitive",
 			["choice",
+				["ref", "start"],
+				["ref", "end"],
 				["ref", "wildcard"],
 				["ref", "character_set_shorthand"],
 				["ref", "negative_character_set"],
@@ -410,13 +412,20 @@ _index_peg_refs
 			],
 		],
 
+		["rule", "start",
+			["private", ["literal", "^"]],
+		],
+		["rule", "end",
+			["private", ["literal", "$"]],
+		],
 		["rule", "wildcard",
 			["private", ["literal", "."]],
 		],
 		["rule", "literal", 
 			["negative_character_set", 
 				"{","}","[","]","(",")", 
-				"|","*","+","?",".","\\","."
+				"|","*","+","?",".","\\",".",
+				"^","$",
 			],
 		],
 		["rule", "positive_character_set",
@@ -895,4 +904,3 @@ function _unit_test(name, tests) =
 	:
 		str(name, ":\tpassed")
     ;
-

@@ -138,45 +138,165 @@ echo([
 
 
 
-*echo([
+echo([
 	"_parse_rx:",
 	"atomic operations",
-	_parse_rx("a?"),
-	_parse_rx("a*"),
-	_parse_rx("a+"),
-	_parse_rx("foo"),
-	_parse_rx("a|b"),
+	_parse_rx("a?") == ["zero_to_one", ["literal", "a"]],
+	_parse_rx("a*") == ["zero_to_many", ["literal", "a"]],
+	_parse_rx("a+") == ["one_to_many", ["literal", "a"]],
+	_parse_rx("foo") 
+	 == ["sequence", ["literal", "f"],
+			["literal", "o"],
+			["literal", "o"]
+		],
+	_parse_rx("a|b")
+	 == ["choice", ["literal", "a"],
+			["literal", "b"]
+		],
 	
 	"variable repetition",
-	_parse_rx(".{3}"),
-	_parse_rx(".{3,5}"),
+	_parse_rx(".{3}") == ["many_to_many", ["wildcard"], "3"],
+	_parse_rx(".{3,5}") == ["many_to_many", ["wildcard"], "35"],
 	"charsets",
-	_parse_rx(".[abcdef]"),
-	_parse_rx("[a-z]"),
-	_parse_rx(".[^abcdef]"),
-	_parse_rx("^[a-z]"),
+	_parse_rx(".[abcdef]")
+	 == ["sequence", ["wildcard"],
+			["positive_character_set",
+				["character_literal", "a"],
+				["character_literal", "b"],
+				["character_literal", "c"],
+				["character_literal", "d"],
+				["character_literal", "e"],
+				["character_literal", "f"]
+			]
+		],
+	_parse_rx("[a-z]") == ["positive_character_set", ["character_range", "az"]],
+	_parse_rx(".[^abcdef]")
+	 == ["sequence", ["wildcard"],
+			["negative_character_set", 
+				["character_literal", "a"],
+				["character_literal", "b"],
+				["character_literal", "c"],
+				["character_literal", "d"],
+				["character_literal", "e"],
+				["character_literal", "f"]
+			]
+		],
+	_parse_rx("^[a-z]") 
+	 == ["sequence", ["start"],
+			["positive_character_set", ["character_range", "az"]]
+		],
 	"escape characters",
-	_parse_rx("\\d"),
-	_parse_rx("\\d\\d"),
-	_parse_rx("\\d?"),
-	_parse_rx("\\s\\d?"),
-	_parse_rx("\\d?|b*\\d+"),
-	_parse_rx("a|\\(bc\\)"),
+	_parse_rx("\\d") 	== ["character_set_shorthand", "d"],
+	_parse_rx("\\d\\d")
+	 == ["sequence", 
+			["character_set_shorthand", "d"],
+			["character_set_shorthand", "d"]
+		],
+	_parse_rx("\\d?") 	== ["zero_to_one", ["character_set_shorthand", "d"]],
+	_parse_rx("\\s\\d?") 
+	 == ["sequence", 
+			["character_set_shorthand", "s"],
+			["zero_to_one", ["character_set_shorthand", "d"]]
+		],
+	_parse_rx("\\d?|b*\\d+")
+	 == ["choice", 
+			["zero_to_one", ["character_set_shorthand", "d"]],
+			["sequence", 
+				["zero_to_many", ["literal", "b"]],
+				["one_to_many", ["character_set_shorthand", "d"]]
+			]
+		],
+	_parse_rx("a|\\(bc\\)")
+	 == ["choice", 
+			["literal", "a"],
+			["sequence", ["character_set_shorthand", "("],
+				["literal", "b"],
+				["literal", "c"],
+				["character_set_shorthand", ")"]
+			]
+		], 
 	"order of operations",
-	_parse_rx("ab?"),
-	_parse_rx("(ab)?"),
-	_parse_rx("a|b?"),
-	_parse_rx("(a|b)?"),
-	_parse_rx("a|bc"),
-	_parse_rx("ab|c"),
-	_parse_rx("(a|b)c"),
-	_parse_rx("a|(bc)"),
-	_parse_rx("a?|b*c+"),
-	_parse_rx("a?|b*c+d|d*e+"),
+	_parse_rx("ab?")
+	 == ["sequence", 
+	 		["literal", "a"],
+			["zero_to_one", ["literal", "b"]]
+		],
+	_parse_rx("(ab)?")
+	 == ["zero_to_one", 
+	 		["sequence", 
+	 			["literal", "a"],
+				["literal", "b"]
+			]
+		],
+	_parse_rx("a|b?")
+	 == ["choice", 
+	 		["literal", "a"],
+			["zero_to_one", ["literal", "b"]]
+		],
+	_parse_rx("(a|b)?")
+	 == ["zero_to_one", 
+	 		["choice", 
+	 			["literal", "a"],
+				["literal", "b"]
+			]
+		],
+	_parse_rx("a|bc") 
+	 == ["choice", 
+	 		["literal", "a"],
+			["sequence", 
+				["literal", "b"],
+				["literal", "c"]
+			]
+		],
+	_parse_rx("ab|c")
+	 == ["choice", 
+	 		["sequence", 
+	 			["literal", "a"],
+				["literal", "b"]
+			],
+			["literal", "c"]
+		],
+	_parse_rx("(a|b)c")
+	 == ["sequence", 
+	 		["choice", 
+	 			["literal", "a"],
+				["literal", "b"]
+			],
+			["literal", "c"]
+		],
+	_parse_rx("a|(bc)")
+	 == ["choice", 
+			["literal", "a"],
+			["sequence", 
+				["literal", "b"],
+				["literal", "c"]
+			]
+		],
+	_parse_rx("a?|b*c+")
+	 == ["choice", 
+	 		["zero_to_one", ["literal", "a"]],
+			["sequence", 
+				["zero_to_many", ["literal", "b"]],
+				["one_to_many", ["literal", "c"]]
+			]
+		],
+	_parse_rx("a?|b*c+d|d*e+")
+	 == ["choice", 
+	 		["zero_to_one", ["literal", "a"]],
+			["sequence", 
+				["zero_to_many", ["literal", "b"]],
+				["one_to_many", ["literal", "c"]],
+				["literal", "d"]
+			],
+			["sequence", 
+				["zero_to_many", ["literal", "d"]],
+				["one_to_many", ["literal", "e"]]
+			]
+		],
 	"edge cases",
-	_parse_rx("a"),
+	_parse_rx("a") == ["literal", "a"],
 	_parse_rx("") ,
-	_parse_rx(undef),
+	_parse_rx(undef) == undef,
 	"invalid syntax",
 	// _parse_rx("((()))"),
 	// _parse_rx( "(()))"),
