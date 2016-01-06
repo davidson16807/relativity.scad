@@ -1,4 +1,4 @@
-include <peg.scad>
+include <strings.scad>
 
 _css_peg = 
 _index_peg_refs
@@ -48,7 +48,7 @@ _index_peg_refs
 				["ref", "class"],
 				["sequence",
 					["private", ["literal","("]],
-					["ref", "operation"],
+					["ref", "selector"],
 					["private", ["literal",")"]],
 				]
 			]
@@ -93,7 +93,12 @@ _index_peg_refs
 		["rule", "class",
 			["sequence",
 				["zero_to_one", ["private", ["literal", "."]]],
-				["one_to_many", ["character_set_shorthand", "w"]]
+				["one_to_many", 
+					["positive_character_set",
+						["character_set_shorthand", "w"],
+						["character_literal", "-"]
+					]
+				]
 			]
 		],
 		["private_rule", "SPACE",
@@ -198,6 +203,23 @@ echo("selector or",
 					["and", ["class", "foo"], ["class", "bar"]], 
 					["class", "baz"]
 				]],
+                
+		_parse_css( "(foo)" )
+			== [["class", "foo"]],
+		_parse_css( "(foo,bar).baz" )
+			== [["and", 
+					["or", ["class", "foo"], ["class", "bar"]], 
+					["class", "baz"]
+				]],
+		_parse_css( "foo(.bar,.baz)" )
+			== [["and", 
+					["class", "foo"], 
+					["or", ["class", "bar"], ["class", "baz"]]
+				]],
+        
+        
+        
+        
 		_parse_css( ".foo.bar,.baz.qux" )
 			== [["or", 
 					["and", ["class", "foo"], ["class", "bar"] ], 
@@ -222,5 +244,20 @@ echo("selector or",
 						["and", ["class", "qux"], ["class", "norf"]]
 					]
 				]],
+
+		_parse_css( "foo.bar-baz.qux,.qux.norf" ) 
+            == [["or", 
+                    ["and", 
+                        ["class", "foo"], 
+                        ["and", 
+                            ["class", "bar-baz"], 
+                            ["class", "qux"]
+                        ]
+                    ], 
+                    ["and", 
+                        ["class", "qux"], 
+                        ["class", "norf"]
+                    ]
+                ]],
 	]
 );
