@@ -1,5 +1,5 @@
 _strings_version = 
-	[2014, 3, 17];
+	[2016, 2, 2];
 function strings_version() =
 	_strings_version;
 function strings_version_num() =
@@ -291,6 +291,9 @@ function _index_peg_refs(peg) =
 	_index_peg_op_refs(peg, _get_rule_indexer(peg));
 function _get_rule(peg, ref) = 
 	[for (rule = peg) if(rule[1] == ref) rule ] [0];
+
+// PUBLIC FACING PEG
+function peg(string, grammar) = _match_parsed_peg(string, _index_peg_refs(grammar));
 
 _rx_peg = 
 _index_peg_refs
