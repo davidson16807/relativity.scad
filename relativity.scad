@@ -707,13 +707,17 @@ $outward = [0,0,0];
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
 // form repeating patterns through translation
-module translated(offset, n=[1], class="*"){
-	show(class)
-	for(i=n)
-		_translate(offset*i)
-			children();
-	hide(class)
-		children();
+module translated(offsets, n=[1], class="*"){
+	offsets = len(offsets.x) == undef && offsets.x != undef? [offsets] : offsets;
+	for(offset=offsets)
+	{
+        show(class)
+        for(i=n)
+            _translate(offset*i)
+                children();
+        hide(class)
+            children();
+    }
 }
 
 // form radially symmetric objects around the z axis
