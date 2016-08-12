@@ -717,13 +717,17 @@ module translated(offset, n=[1], class="*"){
 }
 
 // form radially symmetric objects around the z axis
-module rotated(offset, n=[1], class="*"){
-	show(class)
-	for(i=n)
-		rotate(offset*i)
-			children();
-	hide(class)
-		children();
+module rotated(offsets, n=[1], class="*"){
+	offsets = len(offsets.x) == undef && offsets.x != undef? [offsets] : offsets;
+	for(offset=offsets)
+	{
+        show(class)
+        for(i=n)
+            rotate(offset*i)
+                children();
+        hide(class)
+            children();
+    }
 }
 
 // form bilaterally symmetric objects using the mirror() function
