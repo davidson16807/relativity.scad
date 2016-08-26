@@ -736,13 +736,17 @@ module rotated(offsets, n=[1], class="*"){
 
 // form bilaterally symmetric objects using the mirror() function
 module mirrored(axes=[0,0,0], class="*"){
-	show(class)
-	mirror(axes)
-		children();
-	show(class)
-		children();
-	hide(class)
-		children();
+	axes = len(axes.x) == undef && axes.x != undef? [axes] : axes;
+	for(axis=axes)
+	{
+        show(class)
+        mirror(axis)
+            children();
+        show(class)
+            children();
+        hide(class)
+            children();
+    }
 }
 
 module attach(class){
