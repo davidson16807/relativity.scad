@@ -706,6 +706,26 @@ $outward = [0,0,0];
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
+
+
+module selectable(){
+    _assign(
+        $_ancestor_classes = _push($_ancestor_classes, 
+            _tokenize($class, _token_regex_ignore_dash)
+        )
+    )
+    if(_sizzle_engine($_ancestor_classes, $_show))  
+        children();
+}
+
+module _child_wrapper(){
+	children()
+    for (i = [0 : $children-1]){
+        selectable()
+        children(i);
+    }
+}
+
 // form repeating patterns through translation
 module translated(offsets, n=[1], class="*"){
 	offsets = len(offsets.x) == undef && offsets.x != undef? [offsets] : offsets;
@@ -714,9 +734,9 @@ module translated(offsets, n=[1], class="*"){
         show(class)
         for(i=n)
             _translate(offset*i)
-                children();
+                _child_wrapper() children();
         hide(class)
-            children();
+            _child_wrapper() children();
     }
 }
 
@@ -728,9 +748,9 @@ module rotated(offsets, n=[1], class="*"){
         show(class)
         for(i=n)
             rotate(offset*i)
-                children();
+                _child_wrapper() children();
         hide(class)
-            children();
+            _child_wrapper() children();
     }
 }
 
@@ -741,55 +761,55 @@ module mirrored(axes=[0,0,0], class="*"){
 	{
         show(class)
         mirror(axis)
-            children();
+            _child_wrapper() children();
         show(class)
-            children();
+            _child_wrapper() children();
         hide(class)
-            children();
+            _child_wrapper() children();
     }
 }
 
 module attach(class){
 	_assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
 	_assign($_show=["and", $_show, ["descendant", "*", _sizzle_parse(class)]])
-	children();
+	_child_wrapper() children();
 }
 
 module show(class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
-	children();
+	_child_wrapper() children();
 }
 
 module hide(class="*"){
 	_assign($_show=["and", $_show, ["not", _sizzle_parse(class)]])
-	children();
+	_child_wrapper() children();
 }
 
 module colored(color, class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	color(color)
-	children();
+	_child_wrapper() children();
 	
 	hide(class)
-	children();
+	_child_wrapper() children();
 }
 
 module scaled(v=[0,0,0], class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	scale(v)
-	children();
+	_child_wrapper() children();
 	
 	hide(class)
-	children();
+	_child_wrapper() children();
 }
 
 module resized(newsize, class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	resize(newsize)
-	children();
+	_child_wrapper() children();
 	
 	hide(class)
-	children();
+	_child_wrapper() children();
 }
 
 module hulled(class="*"){
@@ -797,10 +817,10 @@ module hulled(class="*"){
 	if(_sizzle_engine($_ancestor_classes, $_show))
 	hull()
 	_assign($_show=_sizzle_parse(class))
-	children();
+	_child_wrapper() children();
 	
 	hide(class)
-	children();
+	_child_wrapper() children();
 }
 
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
@@ -815,12 +835,12 @@ module differed(negative, positive="*", unaffected=undef){
     if(_sizzle_engine($_ancestor_classes, $_show))
     difference(){
         _assign($_show = _positive)
-            children();
+            _child_wrapper() children();
         _assign($_show = _negative)
-            children();
+            _child_wrapper() children();
     }
     _assign($_show=["and", $_show, _unaffected])
-        children();
+        _child_wrapper() children();
 }
 
 // performs the intersection on a list of object classes
@@ -834,12 +854,12 @@ module intersected(class1, class2, unaffected=undef){
     if(_sizzle_engine($_ancestor_classes, $_show))
     intersection(){
         _assign($_show = class1)
-            children();
+            _child_wrapper() children();
         _assign($_show = class2)
-            children();
+            _child_wrapper() children();
     }
     _assign($_show=["and", $_show, unaffected])
-        children();
+        _child_wrapper() children();
 }
 
 // like translate(), but use positions relative to the size of the parent object
@@ -851,13 +871,13 @@ module align(anchors, bounds="box"){
 		if(bounds == "box")
 		_translate(hadamard(anchor, $parent_bounds)/2)
 		_assign($outward = anchor, $inward = -anchor)
-			children();
+			_child_wrapper() children();
 		
 		if(bounds == "ball"){
 			_anchor = _rotate_matrix(_orient_angles(anchor)) * [0,0,1,1];
 			_translate(hadamard(_anchor, $parent_bounds)/2)
 			_assign($outward = anchor, $inward = -anchor)
-				children();
+				_child_wrapper() children();
 		}
 	}
 }
@@ -869,7 +889,7 @@ module orient(zaxes, roll=0){
 	{
 		rotate(_orient_angles(zaxis))
 		rotate(roll*z)
-			children();
+			_child_wrapper() children();
 	}
 }
 
@@ -919,7 +939,7 @@ module box(	size=[1,1,1],
 		_translate(-hadamard(anchor, $parent_size)/2)
 			if(_sizzle_engine($_ancestor_classes, $_show)) cube($parent_size, center=true);
 		_translate(-hadamard(anchor, $parent_bounds)/2)
-			children();
+			_child_wrapper() children();
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
@@ -957,7 +977,7 @@ module rod(	size=[1,1,1],
 				cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
 		}
 		_translate(-hadamard(anchor, $parent_bounds)/2)
-			children();
+			_child_wrapper() children();
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
@@ -992,7 +1012,7 @@ module ball(size=[1,1,1],
                 resize($parent_size) 
                 sphere(d=$parent_size.x, center=true);
 		_translate(-hadamard(anchor, $parent_bounds)/2)
-			children();
+			_child_wrapper() children();
 	}
 }
 
@@ -1136,10 +1156,6 @@ function _has_token(tokens, token) =
 	: 
         any([for (i = [0:len(tokens)-1]) tokens[i] == token])
 	;	
-
-
-
-
 
 
 
