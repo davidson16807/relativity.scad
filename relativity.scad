@@ -719,7 +719,6 @@ module selectable(){
 }
 
 module _child_wrapper(){
-	children()
     for (i = [0 : $children-1]){
         selectable()
         children(i);
