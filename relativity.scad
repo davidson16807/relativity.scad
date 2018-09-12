@@ -706,7 +706,12 @@ $outward = [0,0,0];
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
-
+module class(name){
+    _assign($class = name)
+	_assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
+    if(_sizzle_engine($_ancestor_classes, $_show))  
+        children();
+}
 
 module selectable(){
     _assign(
