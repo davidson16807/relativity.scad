@@ -824,9 +824,10 @@ module hulled(class="*"){
 
 // performs the union on objects marked as positive space (i.e. objects where $class = positive), 
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
-module differed(negative, positive="*", unaffected=undef){
-	_positive = _sizzle_parse(positive);
+module differed(negative, positive=undef, unaffected=undef){
 	_negative = _sizzle_parse(negative);
+	_positive = positive != undef?
+	    _sizzle_parse(positive) : ["not", _negative];
 	_unaffected = unaffected != undef? 
         _sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]];
     
