@@ -1015,9 +1015,9 @@ module ball(size=[1,1,1],
 			if(_sizzle_engine($_ancestor_classes, $_show)) 
 				if ($parent_size.x != $parent_size.y || $parent_size.x != $parent_size.z)
 					resize($parent_size) 
-					sphere(d=$parent_size.x, center=true);
+					sphere(d=$parent_size.x);
 				else
-					sphere(d=$parent_size.x, center=true);
+					sphere(d=$parent_size.x);
 		_translate(-hadamard(anchor, $parent_bounds)/2)
 			_child_wrapper() children();
 	}
