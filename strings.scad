@@ -1,5 +1,5 @@
 _strings_version = 
-	[2016, 2, 2];
+	[2022, 11, 5];
 function strings_version() =
 	_strings_version;
 function strings_version_num() =
