@@ -594,7 +594,8 @@ function join(strings, delimeter="") =
 		undef
 	: strings == []?
 		""
-	: _join(strings, len(strings)-1, delimeter, 0);
+	: _join(strings, len(strings)-1, delimeter);
+
 function _join(strings, index, delimeter) = 
 	index==0 ? 
 		strings[index] 
@@ -636,7 +637,7 @@ function _coalesce_on(value, error, fallback) =
 		value
 	;
 	
-
+function _to_vector_list(value) = is_undef(value.x) || is_list(value.x) ? value : [value];
 
 
 
@@ -706,7 +707,12 @@ $outward = [0,0,0];
 //hadamard product (aka "component-wise" product) for vectors
 function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 
-
+module class(name){
+    _assign($class = name)
+	_assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
+    if(_sizzle_engine($_ancestor_classes, $_show))  
+        children();
+}
 
 module selectable(){
     _assign(
@@ -727,8 +733,7 @@ module _child_wrapper(){
 
 // form repeating patterns through translation
 module translated(offsets, n=[1], class="*"){
-	offsets = len(offsets.x) == undef && offsets.x != undef? [offsets] : offsets;
-	for(offset=offsets)
+	for(offset=_to_vector_list(offsets))
 	{
         show(class)
         for(i=n)
@@ -741,8 +746,7 @@ module translated(offsets, n=[1], class="*"){
 
 // form radially symmetric objects around the z axis
 module rotated(offsets, n=[1], class="*"){
-	offsets = len(offsets.x) == undef && offsets.x != undef? [offsets] : offsets;
-	for(offset=offsets)
+	for(offset=_to_vector_list(offsets))
 	{
         show(class)
         for(i=n)
@@ -755,8 +759,7 @@ module rotated(offsets, n=[1], class="*"){
 
 // form bilaterally symmetric objects using the mirror() function
 module mirrored(axes=[0,0,0], class="*"){
-	axes = len(axes.x) == undef && axes.x != undef? [axes] : axes;
-	for(axis=axes)
+	for(axis=_to_vector_list(axes))
 	{
         show(class)
         mirror(axis)
@@ -865,8 +868,7 @@ module intersected(class1, class2, unaffected=undef){
 // like translate(), but use positions relative to the size of the parent object
 // if tilt==true, child objects will also be oriented away from the parent object's center
 module align(anchors, bounds="box"){
-	anchors = len(anchors.x)==undef && anchors.x!= undef? [anchors] : anchors;
-	for(anchor=anchors)
+	for(anchor=_to_vector_list(anchors))
 	{
 		if(bounds == "box")
 		_translate(hadamard(anchor, $parent_bounds)/2)
@@ -884,8 +886,7 @@ module align(anchors, bounds="box"){
 
 // like rotate(), but works by aligning the zaxis to a given vector
 module orient(zaxes, roll=0){
-	zaxes = len(zaxes.x) == undef && zaxes.x != undef? [zaxes] : zaxes;
-	for(zaxis=zaxes)
+	for(zaxis=_to_vector_list(zaxes))
 	{
 		rotate(_orient_angles(zaxis))
 		rotate(roll*z)
@@ -915,7 +916,7 @@ module box(	size=[1,1,1],
 			anchor=$inward, bounds="box") {
     
 	d = r!=undef? 2*r : d;
-	size =	len(size)==undef && size!= undef? 
+	size =	!is_list(size) && !is_undef(size) ?  
                 [size,size,size] 
             : d != undef && h == undef? 
                 [d,d,indeterminate] 
@@ -948,7 +949,7 @@ module rod(	size=[1,1,1],
 			anchor=$inward, orientation=top, bounds="rod") {
                 
 	d = r!=undef? 2*r : d;
-	size =	len(size)==undef && size!= undef? 
+	size =	!is_list(size) && !is_undef(size) ? 
                 [size,size,size] 
             : d != undef && h == undef? 
                 [d,d,indeterminate] 
@@ -966,15 +967,18 @@ module rod(	size=[1,1,1],
 			$parent_bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
 							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
-			$parent_radius=sqrt(pow(h/2,2)+pow(d/2,2)),
+			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
 			$inward=center, 
 			$outward=center){
 		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
 			if(_sizzle_engine($_ancestor_classes, $_show))
 				orient(orientation) 
-				resize($parent_size) 
-				cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
+				if ($parent_size.x != $parent_size.y)
+				  resize($parent_size) 
+				  cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
+				else
+				  cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
 		}
 		_translate(-hadamard(anchor, $parent_bounds)/2)
 			_child_wrapper() children();
@@ -986,7 +990,7 @@ module ball(size=[1,1,1],
 			anchor=$inward, bounds="ball") {
 	//diameter is used internally to simplify the maths
 	d = r!=undef? 2*r : d;
-	size =	len(size)==undef && size!= undef? 
+	size =	!is_list(size) && !is_undef(size) ?  
                 [size,size,size] 
             : d != undef && h == undef? 
                 [d,d,d] 
@@ -1009,8 +1013,11 @@ module ball(size=[1,1,1],
 			$outward=center ){
 		_translate(-hadamard(anchor, $parent_size)/2)
 			if(_sizzle_engine($_ancestor_classes, $_show)) 
-                resize($parent_size) 
-                sphere(d=$parent_size.x, center=true);
+				if ($parent_size.x != $parent_size.y || $parent_size.x != $parent_size.z)
+					resize($parent_size) 
+					sphere(d=$parent_size.x);
+				else
+					sphere(d=$parent_size.x);
 		_translate(-hadamard(anchor, $parent_bounds)/2)
 			_child_wrapper() children();
 	}
