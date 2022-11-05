@@ -9,12 +9,12 @@ _nonsymbol = str(_alphanumeric, _whitespace);
 
 _regex_ops = "?*+&|";
 
-_strings_version = 
-	[2014, 3, 17];
-function strings_version() =
-	_strings_version;
-function strings_version_num() =
-	_strings_version.x * 10000 + _strings_version.y * 100 + _strings_version.z;
+_relativity_version = 
+	[2022, 11, 5];
+function relativity_version() =
+	_relativity_version;
+function relativity_version_num() =
+	_relativity_version.x * 10000 + _relativity_version.y * 100 + _relativity_version.z;
 
 
 
