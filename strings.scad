@@ -713,6 +713,7 @@ function equals(this, that, ignore_case=false) =
 
 
 
+// set all letters to "UPPER CASE"
 function upper(string) = 
 	let(code = ascii_code(string))
 	join([for (i = [0:len(string)-1])
@@ -721,6 +722,7 @@ function upper(string) =
             :
                 string[i]
 		]);
+// set all letters to "lower case"
 function lower(string) = 
 	let(code = ascii_code(string))
 	join([for (i = [0:len(string)-1])
@@ -729,6 +731,12 @@ function lower(string) =
             :
                 string[i]
 		]);
+// set all letters to "Title Case"
+function title(string) =
+    let(lower_case_string = lower(string))
+    join([for (word = split(lower_case_string))
+        join ([upper(word[0]), lower(substring(word, 1))], "")
+    ], " ");
 
 function reverse(string) = 
 	string == undef?
