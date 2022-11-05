@@ -817,7 +817,7 @@ function join(strings, delimeter="") =
 		undef
 	: strings == []?
 		""
-	: _join(strings, len(strings)-1, delimeter, 0);
+	: _join(strings, len(strings)-1, delimeter);
 function _join(strings, index, delimeter) = 
 	index==0 ? 
 		strings[index] 
