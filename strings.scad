@@ -654,11 +654,14 @@ function is_string(x) =
 function is_empty(string) = 
 	string == "";
 
+function is_whitespace(string) = 
+	len([for (char=ascii_code(string)) if(char>0) char]) < 1;
+
 function is_null_or_empty(string) = 
-	string == undef || string == "";
+	is_undef(string) || string == "";
 	
 function is_null_or_whitespace(string) = 
-	string == undef || len([for (char=ascii_code(string)) if(char>0) char]) < 1;
+	is_undef(string) || len([for (char=ascii_code(string)) if(char>0) char]) < 1;
 
 function trim(string) = 
 	string == undef?
@@ -735,8 +738,9 @@ function lower(string) =
 function title(string) =
     let(lower_case_string = lower(string))
     join([for (word = split(lower_case_string))
-        join ([upper(word[0]), lower(substring(word, 1))], "")
+        join ([upper(word[0]), lower(after(word, 0))], "")
     ], " ");
+   
 
 function reverse(string) = 
 	string == undef?
@@ -807,19 +811,33 @@ function after(string, index=0) =
 
 	
 
-function parse_int(string, base=10, i=0, nb=0) = 
+function parse_int(string, base=10) = 
 	string[0] == "-" ? 
 		-1*_parse_int(string, base, 1) 
 	: 
 		_parse_int(string, base);
 
-function _parse_int(string, base, i=0, nb=0) = 
+function _parse_int(string, base, i=0, sum=0) = 
 	i == len(string) ? 
-		nb 
+		sum
 	: 
-		nb + _parse_int(string, base, i+1, 
+		sum + _parse_int(string, base, i+1, 
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
-                
+
+function parse_float(string) = 
+	string[0] == "-" ? 
+		-1*parse_float(after(string,0))
+	: 
+		_parse_float(split(string, "."));
+
+function _parse_float(sections)=
+    len(sections) == 2?
+        _parse_int(sections[0], 10) + _parse_int(sections[1], 10)/pow(10,len(sections[1]))
+    :
+        _parse_int(sections[0], 10) 
+    ;
+
+
 function join(strings, delimeter="") = 
 	strings == undef?
 		undef
