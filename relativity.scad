@@ -894,22 +894,6 @@ module orient(zaxes, roll=0){
 	}
 }
 
-// duplicates last instance of box/rod/ball in the call stack
-// useful for performing hull() or difference() between parent and child 
-module parent(size=undef, anchor=center){
-	echo("WARNING: parent() module is depreciated. Please use CSG operators such as differed() and hulled().");
-	size = size==undef? $parent_size : size;
-	if($parent_type=="box") 
-		box(size, anchor=anchor)
-			children();
-	else if($parent_type=="rod")
-		rod(size, anchor=anchor)
-			children();
-	else if($parent_type=="ball")
-		ball(size, anchor=anchor)
-			children();
-}
-
 // wrapper for cube with enhanced centering functionality and cascading children
 module box(	size=[1,1,1], 
 			h=undef, d=undef, r=undef, 
