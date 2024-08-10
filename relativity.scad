@@ -9,7 +9,7 @@ _nonsymbol = str(_alphanumeric, _whitespace);
 
 _regex_ops = "?*+&|";
 
-_relativity_version = 
+_relativity_version =
 	[2022, 11, 5];
 function relativity_version() =
 	_relativity_version;
@@ -26,23 +26,23 @@ function relativity_version_num() =
 //echo(tokenize("foo bar baz  "));
 _token_regex_ignore_space = _parse_rx("\\w+|\\S");
 _token_regex = _parse_rx("\\w+|\\S|\\s+");
-function tokenize(string, ignore_space=true) = 
+function tokenize(string, ignore_space=true) =
     _tokenize(string, ignore_space? _token_regex_ignore_space : _token_regex);
-function _tokenize(string, pattern) = 
+function _tokenize(string, pattern) =
     _grep(string, _index_of(string, pattern, regex=true));
 
 function grep(string, pattern, ignore_case=false) = 		//string
     _grep(string, _index_of(string, _parse_rx(pattern), regex=true, ignore_case=ignore_case));
-function _grep(string, indices) = 
+function _grep(string, indices) =
     [for (index = indices)
         between(string, index.x, index.y)
     ];
 
 
-function replace(string, replaced, replacement, ignore_case=false, regex=false) = 
+function replace(string, replaced, replacement, ignore_case=false, regex=false) =
 	_replace(string, replacement, index_of(string, replaced, ignore_case=ignore_case, regex=regex));
-    
-function _replace(string, replacement, indices, i=0) = 
+
+function _replace(string, replacement, indices, i=0) =
     i >= len(indices)?
         after(string, indices[len(indices)-1].y-1)
     : i == 0?
@@ -52,10 +52,10 @@ function _replace(string, replacement, indices, i=0) =
     ;
 
 
-function split(string, seperator=" ", ignore_case = false, regex=false) = 
-	_split(string, index_of(string, seperator, ignore_case=ignore_case, regex=regex));
-    
-function _split(string, indices, i=0) = 
+function split(string, separator=" ", ignore_case = false, regex=false) =
+	_split(string, index_of(string, separator, ignore_case=ignore_case, regex=regex));
+
+function _split(string, indices, i=0) =
     len(indices) == 0?
         [string]
     : i >= len(indices)?
@@ -66,19 +66,19 @@ function _split(string, indices, i=0) =
         concat( between(string, indices[i-1].y, indices[i].x), _split(string, indices, i+1) )
     ;
 
-function contains(string, substring, ignore_case=false, regex=false) = 
+function contains(string, substring, ignore_case=false, regex=false) =
 	regex?
         _index_of_first(string, _parse_rx(substring), regex=regex, ignore_case=ignore_case) != undef
 	:
 		_index_of_first(string, substring, regex=regex, ignore_case=ignore_case) != undef
-	; 
-	
+	;
 
 
-function index_of(string, pattern, ignore_case=false, regex=false) = 
-	_index_of(string, 
-        regex? _parse_rx(pattern) : pattern, 
-        regex=regex, 
+
+function index_of(string, pattern, ignore_case=false, regex=false) =
+	_index_of(string,
+        regex? _parse_rx(pattern) : pattern,
+        regex=regex,
         ignore_case=ignore_case);
 function _index_of(string, pattern, pos=0, regex=false, ignore_case=false) = 		//[start,end]
 	pos == undef?
@@ -86,17 +86,17 @@ function _index_of(string, pattern, pos=0, regex=false, ignore_case=false) = 		/
 	: pos >= len(string)?
 		[]
 	:
-        _index_of_recurse(string, pattern, 
+        _index_of_recurse(string, pattern,
             _index_of_first(string, pattern, pos=pos, regex=regex, ignore_case=ignore_case),
             pos, regex, ignore_case)
 	;
-function _index_of_recurse(string, pattern, index_of_first, pos, regex, ignore_case) = 
+function _index_of_recurse(string, pattern, index_of_first, pos, regex, ignore_case) =
     index_of_first == undef?
         []
     : concat(
         [index_of_first],
         _coalesce_on(
-            _index_of(string, pattern, 
+            _index_of(string, pattern,
                     pos = index_of_first.y,
                     regex=regex,
                     ignore_case=ignore_case),
@@ -108,33 +108,33 @@ function _index_of_first(string, pattern, pos=0, ignore_case=false, regex=false)
         undef
     : pos >= len(string)?
 		undef
-	: _coalesce_on([pos, _match(string, pattern, pos, regex=regex, ignore_case=ignore_case)], 
+	: _coalesce_on([pos, _match(string, pattern, pos, regex=regex, ignore_case=ignore_case)],
 		[pos, undef],
 		_index_of_first(string, pattern, pos+1, regex=regex, ignore_case=ignore_case))
     ;
-function _match(string, pattern, pos, regex=false, ignore_case=false) = 
+function _match(string, pattern, pos, regex=false, ignore_case=false) =
     regex?
         _match_parsed_rx(string, pattern, pos, ignore_case=ignore_case)
-    : starts_with(string, pattern, pos, ignore_case=ignore_case)? 
-        pos+len(pattern) 
-    : 
+    : starts_with(string, pattern, pos, ignore_case=ignore_case)?
+        pos+len(pattern)
+    :
         undef
     ;
-    
-    
-function starts_with(string, start, pos=0, ignore_case=false, regex=false) = 
+
+
+function starts_with(string, start, pos=0, ignore_case=false, regex=false) =
 	regex?
 		_match_parsed_rx(string,
-			_parse_rx(start), 
-			pos, 
+			_parse_rx(start),
+			pos,
 			ignore_case=ignore_case) != undef
 	:
-		equals(	substring(string, pos, len(start)), 
-			start, 
+		equals(	substring(string, pos, len(start)),
+			start,
 			ignore_case=ignore_case)
 	;
 function ends_with(string, end, ignore_case=false) =
-	equals(	after(string, len(string)-len(end)-1), 
+	equals(	after(string, len(string)-len(end)-1),
 		end,
 		ignore_case=ignore_case)
 	;
@@ -147,12 +147,12 @@ function ends_with(string, end, ignore_case=false) =
 
 function _match_regex(string, pattern, pos=0, ignore_case=false) = 		//end pos
 	_match_parsed_rx(string,
-		_parse_rx(pattern), 
-		pos, 
+		_parse_rx(pattern),
+		pos,
 		ignore_case=ignore_case);
-	
+
 //converts an infix notated regex string to a parse tree using the shunting yard algorithm
-function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) = 
+function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 	rx == undef?
 		undef
 	: i >= len(rx)?
@@ -160,17 +160,17 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			args[0]
 		:
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-			
-			
+
+
 	: ops[0] == "{"?
 		rx[i] == "}"?
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		 i+1)
 		: rx[i] == ","?
 			_parse_rx(rx, ops, 		_swap(args, _push(args[0], "")), 	 i+1)
-		: 
+		:
 			_parse_rx(rx, ops, 		_swap(args, _swap(args[0], str(args[0][0], rx[i]))), i+1)
-			
-			
+
+
 	: ops[0] == "[" || ops[0] == "[^"?
 		rx[i] == "]"?
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i+1)
@@ -194,11 +194,11 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, _push(_push(ops,"&"),"["), _push(args, []), i+1)
 		:
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
-			
+
 	: rx[i] == "{"?
 			_parse_rx(rx, _push(ops, "{"),	_push(args, ["", []]), 			i+1)
-			
-			
+
+
 	: is_in(rx[i], _regex_ops)?
 		_can_shunt(ops, rx[i])?
 			_parse_rx(rx, _push(ops, rx[i]), args, 		 		i+1)
@@ -209,7 +209,7 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, _pop(ops), 	args,			 		i+1)
 		: len(ops) <= 0 ?
 			_parse_rx(rx, ops, 		args,			 		i+1)
-		: 
+		:
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
 	: rx[i] == "("?
 		!_can_concat(rx, i)?
@@ -234,42 +234,42 @@ function _parse_rx(	rx, 		ops=[], 	args=[], 				i=0) =
 			_parse_rx(rx, _pop(ops), 	_push_rx_op(args, ops[0]), 		i)
 	;
 
-	
-function _can_concat(regex, i) = 
+
+function _can_concat(regex, i) =
 	regex[i-1] != undef &&
 	(!is_in(regex[i-1], "|(") || regex[i-2] == "\\");
-	
-function _can_shunt(stack, op) = 
-	stack[0] == "(" || 
-	len(stack) <= 0 || 
+
+function _can_shunt(stack, op) =
+	stack[0] == "(" ||
+	len(stack) <= 0 ||
 	_precedence(op, _regex_ops) < _precedence(stack[0], _regex_ops);
-	
-function _push_rx_op(stack, op) = 
+
+function _push_rx_op(stack, op) =
 	is_in(op[0], "[?*+")? // is unary?
 		_push(_pop(stack), 	[op, stack[0]])
 	: 		 	// is binary?
 		_push(_pop(stack,2), 	[op, stack[1][0], stack[0], ])
 	;
 
-function _swap(stack, replacement) = 
+function _swap(stack, replacement) =
 	_push(_pop(stack), replacement);
-function _pop(stack, n=1) = 
+function _pop(stack, n=1) =
 	n <= 1?
 		len(stack) <=0? [] : stack[1]
 	:
 		_pop(_pop(stack), n-1)
 	;
-function _push(stack, char) = 
+function _push(stack, char) =
 	[char, stack];
 
-function _precedence(op, ops) = 
+function _precedence(op, ops) =
 	search(op, ops)[0];
-	
-function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) = 
+
+function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 	//INVALID INPUT
 	string == undef?
 		undef
-	
+
 	//string length and anchors
 	: regex == "^"?
 		string_pos == 0?
@@ -285,7 +285,7 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 		undef
 	: string_pos >= len(string)?
 		undef
-		
+
 	//ALTERNATION
 	: regex[0] == "|" ?
 		_null_coalesce(
@@ -312,7 +312,7 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 				_parse_int(regex[2][1][0], 10), _parse_int(regex[2][0], 10),
 				string_pos,
 				ignore_case=ignore_case)
-		
+
 	//KLEENE PLUS
 	: regex[0] == "+" ?
 		_match_repetition(string, regex[1],
@@ -328,49 +328,49 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 			ignore_case=ignore_case)
 
 	//CONCATENATION
-	: regex[0] == "&" ?	
-		_match_parsed_rx(string, regex[2], 
-			_match_parsed_rx(string, regex[1], string_pos, ignore_case=ignore_case), 
+	: regex[0] == "&" ?
+		_match_parsed_rx(string, regex[2],
+			_match_parsed_rx(string, regex[1], string_pos, ignore_case=ignore_case),
 			ignore_case=ignore_case)
-			
+
 	//ESCAPE CHARACTER
 	: regex == "\\d"?
 		is_in(string[string_pos], _digit)?
 			string_pos+1
-		: 
+		:
 			undef
 	: regex == "\\s"?
 		is_in(string[string_pos], _whitespace)?
 			string_pos+1
-		: 
+		:
 			undef
 	: regex == "\\w"?
 		is_in(string[string_pos], _alphanumeric)?
 			string_pos+1
-		: 
+		:
 			undef
 	: regex == "\\D"?
 		!is_in(string[string_pos], _digit)?
 			string_pos+1
-		: 
+		:
 			undef
-				
+
 	: regex == "\\S"?
 		!is_in(string[string_pos], _whitespace)?
 			string_pos+1
-		: 
+		:
 			undef
 	: regex == "\\W"?
 		!is_in(string[string_pos], _alphanumeric)?
 			string_pos+1
-		: 
+		:
 			undef
 	: regex[0] == "\\"?
 		string[string_pos] == regex[0][1]?
 			string_pos+1
 		:
 			undef
-	
+
 	//CHARACTER SET
 	: regex[0] == "[" ?
 		_is_in_stack(string[string_pos], regex[1], ignore_case=ignore_case)?
@@ -383,97 +383,101 @@ function _match_parsed_rx(string, regex, string_pos=0, ignore_case=false) =
 			string_pos+1
 		:
 			undef
-		
+
 	//LITERAL
 	: equals(string[string_pos], regex, ignore_case=ignore_case) ?
 		string_pos+1
-	
+
 	//WILDCARD
 	: regex == "."?
 		string_pos+1
-	
+
 	//NO MATCH
-	: 
+	:
 		undef
 	;
 
 
-function is_empty(string) = 
+function is_empty(string) =
 	string == "";
 
-function is_null_or_empty(string) = 
+function is_null_or_empty(string) =
 	string == undef || string == "";
-	
-function is_null_or_whitespace(string) = 
+
+function is_null_or_whitespace(string) =
 	string == undef || trim(string) == "";
 
-function trim(string) = 
+function trim(string) =
 	string == undef?
 		undef
 	: string == ""?
 		""
 	:
 		_null_coalesce(
-			between(string, _match_set(string, _whitespace, 0), 
+			between(string, _match_set(string, _whitespace, 0),
 					_match_set_reverse(string, _whitespace, len(string))),
 			""
 		)
 	;
 
-function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) = 
+function opt_decr(opt_num) =
+  is_undef(opt_num) ? undef
+  : opt_num - 1 ;
+
+function _match_repetition(string, regex, min_reps, max_reps, pos, ignore_case=false) =
     pos == undef?
         undef
     : pos > len(string)?
         undef
 	: _null_coalesce(
-		_match_repetition(string, regex, min_reps-1, max_reps-1, 
-			_match_parsed_rx(string, regex, pos, ignore_case=ignore_case), 
+		_match_repetition(string, regex, opt_decr(min_reps), opt_decr(max_reps),
+			_match_parsed_rx(string, regex, pos, ignore_case=ignore_case),
             ignore_case=ignore_case),
 		(min_reps== undef || min_reps <= 0) && (max_reps == undef || max_reps >= 0)?
 			pos
-		: 
+		:
 			undef
 	);
-	
-function _match_set(string, set, pos) = 
+
+function _match_set(string, set, pos) =
 	pos >= len(string)?
 		len(string)
 	: is_in(string[pos], set )?
 		_match_set(string, set, pos+1)
-	: 
+	:
 		pos
 	;
 
-function _match_set_reverse(string, set, pos) = 
+function _match_set_reverse(string, set, pos) =
 	pos <= 0?
 		0
 	: is_in(string[pos-1], set)?
 		_match_set_reverse(string, set, pos-1)
-	: 
+	:
 		pos
 	;
 
-function _match_quote(string, quote_char, pos) = 
+function _match_quote(string, quote_char, pos) =
 	pos >= len(string)?
 		len(string)
 	: string[pos] == quote_char?
 		pos
-	: string[pos] == "\\"? 
+	: string[pos] == "\\" ?
 		_match_quote(string, quote_char, pos+2)
-	: 
+	:
 		_match_quote(string, quote_char, pos+1)
 	;
 
-	
-function _is_in_range(char, min_char, max_char) = 
+
+function _is_in_range(char, min_char, max_char) =
 	search(char, _alphanumeric,0)[0][0] >= search(min_char, _alphanumeric,0)[0][0] &&
 	search(char, _alphanumeric,0)[0][0] <= search(max_char, _alphanumeric,0)[0][0];
-function _is_in_stack(string, stack, ignore_case=false) = 
+function _is_in_stack(string, stack, ignore_case=false) =
 	stack == undef?
 		false
 	: len(stack) <= 0?
 		false
-	: stack[0][0] == "-"?
+	: stack[0][0] == "-" ?
 		_is_in_range(string, stack[0][1], stack[0][2])
 	: string == stack[0]?
 		true
@@ -483,21 +487,21 @@ function _is_in_stack(string, stack, ignore_case=false) =
 		_is_in_stack(string, _pop(stack), ignore_case=ignore_case)
 	;
 
-function equals(this, that, ignore_case=false) = 
+function equals(this, that, ignore_case=false) =
 	ignore_case?
 		lower(this) == lower(that)
 	:
 		this==that
 	;
 
-function lower(string) = 
+function lower(string) =
 	_transform_case(string, search(string, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0), 97);
 
-function upper(string) = 
+function upper(string) =
 	_transform_case(string, search(string, "abcdefghijklmnopqrstuvwxyz",0), 65);
 
 //TODO: convert to list comprehensions
-function _transform_case(string, encodings, offset) = 
+function _transform_case(string, encodings, offset) =
     join([for (i = [0:len(encodings)-1])
             len(encodings[i]) > 0?
                 chr(encodings[i][0] + offset)
@@ -507,24 +511,24 @@ function _transform_case(string, encodings, offset) =
 	;
 
 
-function reverse(string) = 
+function reverse(string) =
 	string == undef?
 		undef
 	: len(string) <= 0?
 		""
-	: 
+	:
         join([for (i = [0:len(string)-1]) string[len(string)-1-i]])
     ;
 
-function substring(string, start, length=undef) = 
-	length == undef? 
-		between(string, start, len(string)) 
-	: 
+function substring(string, start, length=undef) =
+	length == undef?
+		between(string, start, len(string))
+	:
 		between(string, start, length+start)
 	;
 
 //note: start is inclusive, end is exclusive
-function between(string, start, end) = 
+function between(string, start, end) =
 	string == undef?
 		undef
 	: start == undef?
@@ -541,13 +545,13 @@ function between(string, start, end) =
 		after(string, start-1)
 	: start > end?
 		undef
-	: start == end ? 
-		"" 
-	: 
+	: start == end ?
+		""
+	:
         join([for (i=[start:end-1]) string[i]])
 	;
 
-function before(string, index=0) = 
+function before(string, index=0) =
 	string == undef?
 		undef
 	: index == undef?
@@ -556,7 +560,7 @@ function before(string, index=0) =
 		string
 	: index <= 0?
 		""
-	: 
+	:
         join([for (i=[0:index-1]) string[i]])
 	;
 
@@ -572,42 +576,42 @@ function after(string, index=0) =
 	:
         join([for (i=[index+1:len(string)-1]) string[i]])
 	;
-	
 
-	
 
-function parse_int(string, base=10, i=0, nb=0) = 
-	string[0] == "-" ? 
-		-1*_parse_int(string, base, 1) 
-	: 
+
+
+function parse_int(string, base=10, i=0, nb=0) =
+	string[0] == "-" ?
+		-1*_parse_int(string, base, 1)
+	:
 		_parse_int(string, base);
 
-function _parse_int(string, base, i=0, nb=0) = 
-	i == len(string) ? 
-		nb 
-	: 
-		nb + _parse_int(string, base, i+1, 
+function _parse_int(string, base, i=0, nb=0) =
+	i == len(string) ?
+		nb
+	:
+		nb + _parse_int(string, base, i+1,
 				search(string[i],"0123456789ABCDEF")[0]*pow(base,len(string)-i-1));
-                
-function join(strings, delimeter="") = 
+
+function join(strings, delimiter="") =
 	strings == undef?
 		undef
 	: strings == []?
 		""
-	: _join(strings, len(strings)-1, delimeter);
+	: _join(strings, len(strings)-1, delimiter);
 
-function _join(strings, index, delimeter) = 
-	index==0 ? 
-		strings[index] 
-	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
-	
-function is_in(string, list, ignore_case=false) = 
+function _join(strings, index, delimiter) =
+	index==0 ?
+		strings[index]
+	: str(_join(strings, index-1, delimiter), delimiter, strings[index]) ;
+
+function is_in(string, list, ignore_case=false) =
 	string == undef?
 		false
-    : 
+    :
         any([ for (i = [0:len(list)-1]) equals(string, list[i], ignore_case=ignore_case) ])
 	;
-function any(booleans, index=0) = 
+function any(booleans, index=0) =
     index > len(booleans)?
         false
     : booleans[index]?
@@ -615,28 +619,28 @@ function any(booleans, index=0) =
     :
         any(booleans, index+1)
     ;
-function all(booleans, index=0) = 
+function all(booleans, index=0) =
 	index >= len(booleans)?
 		true
 	: !booleans[index]?
 		false
-	: 
+	:
 		all(booleans, index+1)
 	;
 
-function _null_coalesce(string, replacement) = 
+function _null_coalesce(string, replacement) =
 	string == undef?
 		replacement
 	:
 		string
 	;
-function _coalesce_on(value, error, fallback) = 
+function _coalesce_on(value, error, fallback) =
 	value == error?
 		fallback
-	: 
+	:
 		value
 	;
-	
+
 function _to_vector_list(value) = is_undef(value.x) || is_list(value.x) ? value : [value];
 
 
@@ -656,7 +660,7 @@ function _to_vector_list(value) = is_undef(value.x) || is_list(value.x) ? value 
 
 function relativity_version() =
 	[2015, 11, 26];
-function relativity_version_num() = 
+function relativity_version_num() =
 	relativity_version().x * 10000 + relativity_version().y * 100 + relativity_version().z;
 //echo(str("relativity.scad ", relativity_version().x, ".", relativity_version().y, ".", relativity_version().z));
 
@@ -700,8 +704,8 @@ $_show = "*";
 $class = [];
 // indicates the absolute position of a primitive
 $position = [0,0,0];
-// a vector indicating the direction of a parent object		
-$inward = [0,0,0];		
+// a vector indicating the direction of a parent object
+$inward = [0,0,0];
 $outward = [0,0,0];
 
 //hadamard product (aka "component-wise" product) for vectors
@@ -710,17 +714,17 @@ function hadamard(v1,v2) = [v1.x*v2.x, v1.y*v2.y, v1.z*v2.z];
 module class(name){
     _assign($class = name)
 	_assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
-    if(_sizzle_engine($_ancestor_classes, $_show))  
+    if(_sizzle_engine($_ancestor_classes, $_show))
         children();
 }
 
 module selectable(){
     _assign(
-        $_ancestor_classes = _push($_ancestor_classes, 
+        $_ancestor_classes = _push($_ancestor_classes,
             _tokenize($class, _token_regex_ignore_dash)
         )
     )
-    if(_sizzle_engine($_ancestor_classes, $_show))  
+    if(_sizzle_engine($_ancestor_classes, $_show))
         children();
 }
 
@@ -791,7 +795,7 @@ module colored(color, class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	color(color)
 	_child_wrapper() children();
-	
+
 	hide(class)
 	_child_wrapper() children();
 }
@@ -800,7 +804,7 @@ module scaled(v=[0,0,0], class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	scale(v)
 	_child_wrapper() children();
-	
+
 	hide(class)
 	_child_wrapper() children();
 }
@@ -809,7 +813,7 @@ module resized(newsize, class="*"){
 	_assign($_show=["and", $_show, _sizzle_parse(class)])
 	resize(newsize)
 	_child_wrapper() children();
-	
+
 	hide(class)
 	_child_wrapper() children();
 }
@@ -820,20 +824,20 @@ module hulled(class="*"){
 	hull()
 	_assign($_show=_sizzle_parse(class))
 	_child_wrapper() children();
-	
+
 	hide(class)
 	_child_wrapper() children();
 }
 
-// performs the union on objects marked as positive space (i.e. objects where $class = positive), 
+// performs the union on objects marked as positive space (i.e. objects where $class = positive),
 // and performs the difference for objects marked as negative space (i.e objects where $class = $negative)
 module differed(negative, positive=undef, unaffected=undef){
 	_negative = _sizzle_parse(negative);
 	_positive = positive != undef?
 	    _sizzle_parse(positive) : ["not", _negative];
-	_unaffected = unaffected != undef? 
+	_unaffected = unaffected != undef?
         _sizzle_parse(unaffected) : ["not", ["or", _positive, _negative]];
-    
+
     _assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
     if(_sizzle_engine($_ancestor_classes, $_show))
     difference(){
@@ -850,9 +854,9 @@ module differed(negative, positive=undef, unaffected=undef){
 module intersected(class1, class2, unaffected=undef){
 	class1 = _sizzle_parse(class1);
 	class2 = _sizzle_parse(class2);
-	unaffected = unaffected != undef? 
+	unaffected = unaffected != undef?
 		unaffected : ["not", ["or", class1, class2]];
-    
+
     _assign($_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)))
     if(_sizzle_engine($_ancestor_classes, $_show))
     intersection(){
@@ -874,7 +878,7 @@ module align(anchors, bounds="box"){
 		_translate(hadamard(anchor, $parent_bounds)/2)
 		_assign($outward = anchor, $inward = -anchor)
 			_child_wrapper() children();
-		
+
 		if(bounds == "ball"){
 			_anchor = _rotate_matrix(_orient_angles(anchor)) * [0,0,1,1];
 			_translate(hadamard(_anchor, $parent_bounds)/2)
@@ -895,31 +899,31 @@ module orient(zaxes, roll=0){
 }
 
 // wrapper for cube with enhanced centering functionality and cascading children
-module box(	size=[1,1,1], 
-			h=undef, d=undef, r=undef, 
+module box(	size=[1,1,1],
+			h=undef, d=undef, r=undef,
 			anchor=$inward, bounds="box") {
-    
+
 	d = r!=undef? 2*r : d;
-	size =	!is_list(size) && !is_undef(size) ?  
-                [size,size,size] 
-            : d != undef && h == undef? 
-                [d,d,indeterminate] 
-            : d == undef && h != undef? 
-                [indeterminate, indeterminate, h] 
+	size =	!is_list(size) && !is_undef(size) ?
+                [size,size,size]
+            : d != undef && h == undef?
+                [d,d,indeterminate]
+            : d == undef && h != undef?
+                [indeterminate, indeterminate, h]
             : d != undef && h != undef?
-                [d,d,h] 
-            : 
+                [d,d,h]
+            :
                 size
             ;
-                
-	_assign($parent_size = size, 
-			$parent_type="box", 
+
+	_assign($parent_size = size,
+			$parent_type="box",
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
-			$inward=center, 
+			$inward=center,
 			$outward=center){
 		_translate(-hadamard(anchor, $parent_size)/2)
 			if(_sizzle_engine($_ancestor_classes, $_show)) cube($parent_size, center=true);
@@ -928,38 +932,38 @@ module box(	size=[1,1,1],
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module rod(	size=[1,1,1], 
-			h=undef, d=undef, r=undef, 
+module rod(	size=[1,1,1],
+			h=undef, d=undef, r=undef,
 			anchor=$inward, orientation=top, bounds="rod") {
-                
+
 	d = r!=undef? 2*r : d;
-	size =	!is_list(size) && !is_undef(size) ? 
-                [size,size,size] 
-            : d != undef && h == undef? 
-                [d,d,indeterminate] 
-            : d == undef && h != undef? 
-                [indeterminate, indeterminate, h] 
+	size =	!is_list(size) && !is_undef(size) ?
+                [size,size,size]
+            : d != undef && h == undef?
+                [d,d,indeterminate]
+            : d == undef && h != undef?
+                [indeterminate, indeterminate, h]
             : d != undef && h != undef?
-                [d,d,h] 
-            : 
+                [d,d,h]
+            :
                 size
             ;
     _bounds = _rotate_matrix(_orient_angles(orientation)) * [size.x,size.y,size.z,1];
-                
-	_assign($parent_size = size, 
+
+	_assign($parent_size = size,
 			$parent_type="rod",
 			$parent_bounds=[abs(_bounds.x) < indeterminate/2? abs(_bounds.x) : 0,
 							abs(_bounds.y) < indeterminate/2? abs(_bounds.y) : 0,
 							abs(_bounds.z) < indeterminate/2? abs(_bounds.z) : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
-			$inward=center, 
+			$inward=center,
 			$outward=center){
 		_translate(-hadamard(anchor, [abs(_bounds.x),abs(_bounds.y),abs(_bounds.z)])/2){
 			if(_sizzle_engine($_ancestor_classes, $_show))
-				orient(orientation) 
+				orient(orientation)
 				if ($parent_size.x != $parent_size.y)
-				  resize($parent_size) 
+				  resize($parent_size)
 				  cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
 				else
 				  cylinder(d=$parent_size.x, h=$parent_size.z, center=true);
@@ -969,36 +973,36 @@ module rod(	size=[1,1,1],
 	}
 }
 // wrapper for cylinder with enhanced centering functionality and cascading children
-module ball(size=[1,1,1], 
-			h=undef, d=undef, r=undef, 
+module ball(size=[1,1,1],
+			h=undef, d=undef, r=undef,
 			anchor=$inward, bounds="ball") {
 	//diameter is used internally to simplify the maths
 	d = r!=undef? 2*r : d;
-	size =	!is_list(size) && !is_undef(size) ?  
-                [size,size,size] 
-            : d != undef && h == undef? 
-                [d,d,d] 
-            : d == undef && h != undef? 
-                [h, h, h] 
+	size =	!is_list(size) && !is_undef(size) ?
+                [size,size,size]
+            : d != undef && h == undef?
+                [d,d,d]
+            : d == undef && h != undef?
+                [h, h, h]
             : d != undef && h != undef?
-                [d,d,h] 
-            : 
+                [d,d,h]
+            :
                 size
             ;
-                
-	_assign($parent_size = size, 
-			$parent_type="ball", 
+
+	_assign($parent_size = size,
+			$parent_type="ball",
 			$parent_bounds=[size.x < indeterminate/2? size.x : 0,
 							size.y < indeterminate/2? size.y : 0,
 							size.z < indeterminate/2? size.z : 0],
 			$parent_radius=sqrt(pow(size.x/2,2) + pow(size.y/2,2) + pow(size.z/2,2)),
 			$_ancestor_classes = _push($_ancestor_classes, _tokenize($class, _token_regex_ignore_dash)),
-			$inward=center, 
+			$inward=center,
 			$outward=center ){
 		_translate(-hadamard(anchor, $parent_size)/2)
-			if(_sizzle_engine($_ancestor_classes, $_show)) 
+			if(_sizzle_engine($_ancestor_classes, $_show))
 				if ($parent_size.x != $parent_size.y || $parent_size.x != $parent_size.z)
-					resize($parent_size) 
+					resize($parent_size)
 					sphere(d=$parent_size.x);
 				else
 					sphere(d=$parent_size.x);
@@ -1016,22 +1020,22 @@ module _assign(){
 
 //matrix rotation functions
 function _rotate_x_matrix(a)=
-							[[1,0,0,0], 
-                      [0,cos(a),-sin(a),0], 
-                      [0,sin(a),cos(a),0], 
-                      [0,0,0,1]]; 
+							[[1,0,0,0],
+                      [0,cos(a),-sin(a),0],
+                      [0,sin(a),cos(a),0],
+                      [0,0,0,1]];
 
 function _rotate_y_matrix(a)=
-							[[cos(a),0,sin(a),0], 
-                      [0,1,0,0], 
-                      [-sin(a),0,cos(a),0], 
-                      [0,0,0,1]]; 
+							[[cos(a),0,sin(a),0],
+                      [0,1,0,0],
+                      [-sin(a),0,cos(a),0],
+                      [0,0,0,1]];
 
 function _rotate_z_matrix(a)=
-							[[cos(a),-sin(a),0,0], 
-                      [sin(a),cos(a),0,0], 
-                      [0,0,1,0], 
-                      [0,0,0,1]]; 
+							[[cos(a),-sin(a),0,0],
+                      [sin(a),cos(a),0,0],
+                      [0,0,1,0],
+                      [0,0,0,1]];
 
 function _rotate_matrix(a)=_rotate_z_matrix(a.z)*_rotate_y_matrix(a.y)*_rotate_x_matrix(a.x);
 
@@ -1046,8 +1050,8 @@ module _translate(offset){
 	translate(offset)
 	children();
 }
-	
-        
+
+
 //echo(_sizzle_parse("not(foo,bar)"));
 //echo(_sizzle_parse("baz"));
 //echo(_sizzle_parse("bar baz"));
@@ -1056,16 +1060,16 @@ module _translate(offset){
 //echo(_sizzle_engine([["baz", []],[]], _sizzle_parse("not(foo,bar)")));
 //echo(_sizzle_engine([["bar", []],[]], _sizzle_parse("not(foo,bar)")));
 //echo(_sizzle_engine([["baz", []], [["bar", []],[]]], _sizzle_parse("bar baz")));
-function _sizzle_engine_ancestor(ancestors, sizzle) = 
+function _sizzle_engine_ancestor(ancestors, sizzle) =
         //return true if any ancestor matches the sizzle
         len(ancestors) <= 0?
             false
         : _sizzle_engine(_push([], ancestors[0]), sizzle)?
             true
-        : 
+        :
             _sizzle_engine_ancestor(_pop(ancestors), sizzle)
         ;
-function _sizzle_engine(classes, sizzle) = 
+function _sizzle_engine(classes, sizzle) =
 	//is sizzle a string?
 	sizzle == str(sizzle)?
 		sizzle != "" && (sizzle == "*" || _has_token(classes[0], sizzle))
@@ -1085,10 +1089,10 @@ function _sizzle_engine(classes, sizzle) =
 	;
 
 _sizzle_token_regex = _parse_rx("(\\w|_|-)+|\\S|\\s+");
-function _sizzle_parse(sizzle) = 
+function _sizzle_parse(sizzle) =
 	sizzle == ""?
 		""
-	: 
+	:
 		_sizzle_DFA(
 			_tokenize(sizzle, _sizzle_token_regex)
 		)
@@ -1099,7 +1103,7 @@ function _sizzle_parse(sizzle) =
 //echo(_sizzle_DFA(_tokenize("foo bar,baz")));
 //echo(_sizzle_DFA(_tokenize("foo.bar,baz")));
 //simulates a deterministic finite automaton that parses tokenized sizzle strings
-function _sizzle_DFA(in, ops=[], args=[], pos=0) = 
+function _sizzle_DFA(in, ops=[], args=[], pos=0) =
 	pos >= len(in)?
 		len(ops) <= 0?
 			args[0]
@@ -1125,8 +1129,8 @@ function _sizzle_DFA(in, ops=[], args=[], pos=0) =
 	:
 			_sizzle_DFA(in,	ops,                _push(args, in[pos]), 	pos+1)
 	;
-        
-function _push_sizzle_op(args, op) = 
+
+function _push_sizzle_op(args, op) =
 	op == "or" || op == "and" || op == "descendant" || op == "child"?
 		_push(
 			_pop(args, 2),
@@ -1138,15 +1142,15 @@ function _push_sizzle_op(args, op) =
 			[op, args[0]]
 		)
 	;
-	
+
 //echo(_has_token(["baz",[]], "baz"));
 //echo(_has_token(tokenize("foo bar baz"), "baz"));
-function _has_token(tokens, token) = 
+function _has_token(tokens, token) =
 	tokens == undef || len(tokens) <= 0?
 		false
-	: 
+	:
         any([for (i = [0:len(tokens)-1]) tokens[i] == token])
-	;	
+	;
 
 
 

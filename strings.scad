@@ -527,8 +527,8 @@ function _replace(string, replacement, indices, i=0) =
     ;
 
 
-function split(string, seperator=" ", ignore_case = false, regex=false) = 
-	_split(string, index_of(string, seperator, ignore_case=ignore_case, regex=regex));
+function split(string, separator=" ", ignore_case = false, regex=false) = 
+	_split(string, index_of(string, separator, ignore_case=ignore_case, regex=regex));
     
 function _split(string, indices, i=0) = 
     len(indices) == 0?
@@ -838,16 +838,16 @@ function _parse_float(sections)=
     ;
 
 
-function join(strings, delimeter="") = 
+function join(strings, delimiter="") = 
 	strings == undef?
 		undef
 	: strings == []?
 		""
-	: _join(strings, len(strings)-1, delimeter);
-function _join(strings, index, delimeter) = 
+	: _join(strings, len(strings)-1, delimiter);
+function _join(strings, index, delimiter) = 
 	index==0 ? 
 		strings[index] 
-	: str(_join(strings, index-1, delimeter), delimeter, strings[index]) ;
+	: str(_join(strings, index-1, delimiter), delimiter, strings[index]) ;
 	
 function is_in(string, list, ignore_case=false) = 
 	string == undef?

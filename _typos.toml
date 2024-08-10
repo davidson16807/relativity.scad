@@ -1,0 +1,13 @@
+# typos config
+# https://github.com/crate-ci/typos/blob/master/docs/reference.md
+
+[files]
+ignore-dot = false
+
+[default]
+extend-ignore-re = [
+  # foo bar/z regex selectors
+  # "fo+"
+  # "ba[rz]"
+  "(?i)\"(fo|ba)[\\+\\[\"]",
+]
